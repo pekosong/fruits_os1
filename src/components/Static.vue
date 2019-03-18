@@ -68,25 +68,13 @@
           <div>
             <h3>주간 생산량</h3>
           </div>
-          <GChart
-            :settings="{packages: ['bar']}"
-            :data="chartData1"
-            :options="chartOptions1"
-            :createChart="(el, google) => new google.charts.Bar(el)"
-            @ready="onChartReady"
-          />
+          <GChart type="ColumnChart" :data="chartData1" :options="chartOptions1"/>
         </div>
         <div class="child">
           <div>
             <h3>일간 생산량</h3>
           </div>
-          <GChart
-            :settings="{packages: ['bar']}"
-            :data="chartData2"
-            :options="chartOptions2"
-            :createChart="(el, google) => new google.charts.Bar(el)"
-            @ready="onChartReady"
-          />
+          <GChart type="ColumnChart" :data="chartData2" :options="chartOptions2"/>
         </div>
       </div>
     </div>
@@ -103,13 +91,13 @@ export default {
   },
   data() {
     return {
-      chartsLib: null,
       chartData1: [
-        ["Year", "A급", "B급", "C급"],
-        ["사과", 1000, 400, 200],
-        ["오렌지", 1170, 460, 250],
-        ["바나나", 660, 1120, 300],
-        ["딸기", 1030, 540, 350]
+        ["Element", "", { role: "style" }],
+        ["사과", 2500, "#b87333"],
+        ["오렌지", 2400, "silver"],
+        ["바나나", 1800, "gold"],
+        ["딸기", 1500, "color: #e5e4e2"],
+        ["토마토", 2000, "gray"]
       ],
       chartOptions1: {
         chart: {
@@ -132,7 +120,8 @@ export default {
       }
     };
   },
-  mounted() {}
+  computed: {},
+  methods: {}
 };
 </script>
 
@@ -152,6 +141,7 @@ export default {
 }
 .child {
   width: 50%;
+  height: 300px;
   background: #ffffff;
   border-radius: 10px;
   padding: 15px;

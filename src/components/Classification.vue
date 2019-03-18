@@ -27,7 +27,7 @@
         <div class="right">
           <div class="right-top">
             <div>
-              <h4>선별결과 : {{result}}급 {{parseInt(prob * 100)}}%</h4>
+              <h4>선별결과 : {{result}} {{parseInt(prob * 100)}}%</h4>
             </div>
 
             <div style="text-align:center">
@@ -51,7 +51,7 @@
                 :style="{filter:'grayscale(' + (100 - (100 / n)) + '%)'}"
                 style="width: 80px"
               >
-              <h4 class="ml-2">{{ classes[numbers][n-1] }} 등급 : {{ count[numbers][n-1]}} 개</h4>
+              <h4 class="ml-2">{{ classes[numbers][n-1] }} - {{ count[numbers][n-1]}} 개</h4>
             </div>
           </div>
         </div>
@@ -80,11 +80,10 @@ export default {
       mobilenet: undefined,
       yolomodel: undefined,
       classes: {
-        2: ["상", "하"],
-        3: ["상", "중", "하"],
-        4: ["상", "중", "하", "최하"]
+        2: ["정상", "흠집"],
+        3: ["정상", "흠집", "얼룩"],
+        4: ["정상", "흠집", "얼룩", "멍"]
       },
-      real_classes: ["하", "상", "중"],
       result: "",
       prob: 0,
       count: {
@@ -123,13 +122,20 @@ export default {
       console.log("yolo model 로딩 완료");
     },
     async loadmobilenet() {
+      console.log(
+        `https://raw.githubusercontent.com/pekosong/models/master/${
+          this.selectedename
+        }${this.numbers}/model.json`,
+        "로딩시작"
+      );
       this.mobilenet = await tf.loadLayersModel(
         `https://raw.githubusercontent.com/pekosong/models/master/${
-          this.select
-        }/model.json`
+          this.selectedename
+        }${this.numbers}/model.json`,
+        false
       );
       this.mobilenet.predict(tf.zeros([1, 224, 224, 3])).dispose();
-      console.log(this.select, "model 로딩완료");
+      console.log(this.selectedename, "model 로딩완료");
     },
 
     // Loop 시작
@@ -154,17 +160,26 @@ export default {
       const boxes = await yolo(inputImage, this.yolomodel);
       console.log(boxes);
       let song = 0;
+      this.makecanvas();
       boxes.forEach(box => {
         const { className } = box;
+        console.log(className);
 
+        if (this.selectedename == "fruits") {
+          this.draw(box);
+          this.status = "분류 중";
+          song += 1;
+        }
         if (className === this.selectedename) {
-          this.status = "판별 중";
+          this.status = "선별 중";
           console.log(this.selectedname);
+
           this.draw(box);
           this.classification();
           song += 1;
         }
       });
+
       if (song === 0) {
         this.$refs.canvas
           .getContext("2d")
@@ -172,6 +187,11 @@ export default {
         this.status = `${this.selectedname} 감지 안 됨`;
         console.log(`${this.selectedname} 없음`);
       }
+    },
+    makecanvas() {
+      this.$refs.canvas
+        .getContext("2d")
+        .drawImage(this.$refs.canvas1, 0, 0, this.width, this.height);
     },
 
     // Canvas의 Detecting된 과일에 Rectangle과 Label
@@ -185,9 +205,10 @@ export default {
       this.$refs.canvas2
         .getContext("2d")
         .drawImage(this.$refs.canvas1, x, y, width, height, 0, 0, 400, 400);
-      this.$refs.canvas
-        .getContext("2d")
-        .drawImage(this.$refs.canvas1, 0, 0, this.width, this.height);
+
+      // let image = this.$refs.canvas2.toDataURL("image/jpeg").replace("image/jpeg", "image/octet-stream")
+      // window.location.href = image;
+
       const ctx = this.$refs.canvas.getContext("2d");
       ctx.font = "40px Arial";
       ctx.fillText(className, x, y - 10);
@@ -195,7 +216,6 @@ export default {
       ctx.strokeStyle = "blue";
       ctx.strokeRect(x, y, width, height);
     },
-
     // Canvas2에 Detecting된 과일 분류
     async classification() {
       let inputImage = tf.browser
@@ -206,29 +226,31 @@ export default {
         .expandDims();
       let predictions = await this.mobilenet.predict(inputImage);
       let results = Array.from(predictions.dataSync());
-      this.result = this.real_classes[results.indexOf(Math.max(...results))];
+      this.result = this.classes[this.numbers][
+        results.indexOf(Math.max(...results))
+      ];
       this.prob = Math.max(...results);
 
       if (this.numbers == 2) {
-        if (this.result === "상") {
+        if (this.result === "정상") {
           this.count[this.numbers][0] += 1;
         } else {
           this.count[this.numbers][1] += 1;
         }
       } else if (this.numbers == 3) {
-        if (this.result === "상") {
+        if (this.result === "정상") {
           this.count[this.numbers][0] += 1;
-        } else if (this.result === "중") {
+        } else if (this.result === "흡짐") {
           this.count[this.numbers][1] += 1;
         } else {
           this.count[this.numbers][2] += 1;
         }
       } else {
-        if (this.result === "상") {
+        if (this.result === "정상") {
           this.count[this.numbers][0] += 1;
-        } else if (this.result === "중") {
+        } else if (this.result === "흡짐") {
           this.count[this.numbers][1] += 1;
-        } else if (this.result === "하") {
+        } else if (this.result === "멍") {
           this.count[this.numbers][2] += 1;
         } else {
           this.count[this.numbers][3] += 1;
