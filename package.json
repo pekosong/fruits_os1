@@ -12,7 +12,7 @@
     "bootstrap": "^4.3.1",
     "bootstrap-vue": "^2.0.0-rc.14",
     "laue": "^0.2.0",
-    "tfjs-yolo-tiny": "^1.0.1",
+    "tfjs-yolo": "0.0.3",
     "vue": "^2.6.8",
     "vue-google-charts": "^0.3.2",
     "vue-router": "^3.0.2",

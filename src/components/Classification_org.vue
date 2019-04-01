@@ -1,41 +1,30 @@
 <template>
   <div class="start">
     <div class="wrapper">
-      <!-- Top -->
       <div class="top">
         <div>
           <h1>{{status}} : {{selectedname}}</h1>
         </div>
       </div>
-      <!-- Top-end -->
-
-      <!-- Main -->
       <div class="main">
-        <!-- Left -->
         <div class="left">
-          <div class="center">
+          <div>
             <div>
-              <h1>딥러닝 기반 과일 선별중 by OS1</h1>
+              <h3>딥러닝 기반 과일 선별중 by OS1</h3>
             </div>
-            <div class="center">
-              <video ref="video" id="video" width="800px" height="600px" autoplay v-show="false"></video>
-              <canvas
-                style="border-radius: 10px;"
-                ref="canvas"
-                id="canvas"
-                width="800px"
-                height="600px"
-                v-show="true"
-              ></canvas>
-              <canvas ref="canvas1" id="canvas1" width="800px" height="600px" v-show="false"></canvas>
-            </div>
+            <video ref="video" id="video" width="1024px" height="768px" autoplay v-show="false"></video>
+            <canvas
+              style="border-radius: 10px;"
+              ref="canvas"
+              id="canvas"
+              width="1024px"
+              height="768px"
+              v-show="true"
+            ></canvas>
+            <canvas ref="canvas1" id="canvas1" width="1024px" height="768px" v-show="false"></canvas>
           </div>
         </div>
-        <!-- Left-End -->
-
-        <!-- Right -->
         <div class="right">
-          <!-- Right-Top -->
           <div class="right-top">
             <div>
               <h4>선별결과 : {{result}} {{parseInt(prob * 100)}}%</h4>
@@ -46,92 +35,26 @@
                 style="border-radius: 10px;"
                 ref="canvas2"
                 id="canvas2"
-                width="300px"
-                height="300px"
+                width="400px"
+                height="400px"
                 v-show="true"
               ></canvas>
             </div>
           </div>
-          <!-- Right-Top-End -->
-
-          <!-- Right-Bot -->
-          <div>
-            <h4>등급 선별 결과</h4>
+          <div class="right-bot">
+            <div>
+              <h4>등급별 선별 현황</h4>
+            </div>
+            <div v-for="n in numbers" :key="n" class="container" v-show="show">
+              <img
+                :src="selectedimg"
+                :style="{filter:'grayscale(' + (100 - (100 / n)) + '%)'}"
+                style="width: 80px"
+              >
+              <h4 class="ml-2">{{ classes[numbers][n-1] }} - {{ count[numbers][n-1]}} 개</h4>
+            </div>
           </div>
-
-          <b-container class="right-bot">
-            <b-row style="width:100%">
-              <b-col class="quality text-center">
-                <div>
-                  <h3>흠집</h3>
-                </div>
-                <div>
-                  <img
-                    :src="selectedimg"
-                    :style="{filter:'grayscale(' + (100 - (100 / 1 * quality)) + '%)'}"
-                    style="width: 80px"
-                  >
-                  <div>
-                    <b-button v-if="quality" variant="info" size="lg">정상</b-button>
-                    <b-button v-else variant="danger" size="lg">비정상</b-button>
-                  </div>
-                </div>
-              </b-col>
-              <b-col class="color text-center">
-                <div>
-                  <h3>색깔</h3>
-                </div>
-                <div>
-                  <img
-                    :src="selectedimg"
-                    :style="{filter:'grayscale(' + (100 - (100 / 1 * color)) + '%)'}"
-                    style="width: 80px"
-                  >
-                  <div>
-                    <b-button v-if="color" variant="info" size="lg">정상</b-button>
-                    <b-button v-else variant="danger" size="lg">비정상</b-button>
-                  </div>
-                </div>
-              </b-col>
-              <b-col class="size text-center">
-                <div>
-                  <h3>크기</h3>
-                </div>
-                <div>
-                  <img
-                    :src="selectedimg"
-                    :style="{filter:'grayscale(' + 0 + '%)'}"
-                    style="width: 80px"
-                  >
-                  <div>
-                    <b-button variant="info" size="lg">{{size}}cm</b-button>
-                  </div>
-                </div>
-              </b-col>
-            </b-row>
-          </b-container>
-          <!-- Right-Bot-End -->
-          <div>
-            <h4>등급별 선별 현황</h4>
-          </div>
-          <b-container class="right-bot">
-            <b-row class="results">
-              <b-col v-for="n in numbers" :key="n" v-show="show" class="center">
-                <img
-                  :src="selectedimg"
-                  :style="{filter:'grayscale(' + (100 - (100 / n)) + '%)'}"
-                  style="width: 80px;"
-                >
-                <b-button
-                  size="lg"
-                  block
-                  variant="dark"
-                >{{ classes[numbers][n-1] }} - {{ count[numbers][n-1]}} 개</b-button>
-              </b-col>
-            </b-row>
-          </b-container>
         </div>
-        <!-- Right End -->
       </div>
       <div class="bot center">
         <div>
@@ -145,6 +68,7 @@
 
 <script>
 import * as tf from "@tensorflow/tfjs";
+// import yolo, { downloadModel } from "tfjs-yolo-tiny";
 import { setInterval, setTimeout } from "timers";
 import yolo from "tfjs-yolo";
 
@@ -157,23 +81,22 @@ export default {
       mobilenet: undefined,
       yolomodel: undefined,
       classes: {
-        2: ["A급", "B급"],
-        3: ["A급", "B급", "C급"],
-        4: ["A급", "B급", "C급", "D급"]
+        2: ["정상", "흠집"],
+        3: ["정상", "흠집", "얼룩"],
+        4: ["정상", "흠집", "얼룩", "멍"]
       },
+      result: "",
+      prob: 0,
       count: {
         2: [0, 0],
         3: [0, 0, 0],
         4: [0, 0, 0, 0]
       },
-      result: "",
-      prob: 0,
       show: true,
-      width: 800,
-      height: 600,
-      size: 0,
-      quality: 1,
-      color: 1
+      select: "orange",
+      width: 1024,
+      height: 768,
+      myYolo: undefined
     };
   },
   mounted() {
@@ -192,21 +115,32 @@ export default {
     this.loadmobilenet();
     setInterval(() => {
       this.play();
-    }, 500);
+    }, 200);
   },
   methods: {
+    // async loadyolomodel() {
+    //   this.yolomodel = await downloadModel();
+    //   await yolo(tf.zeros([1, 416, 416, 3]), this.yolomodel);
+    //   console.log("yolo model 로딩 완료");
+    // },
     async loadyolomodel1() {
-      this.yolomodel = await yolo.v3tiny(
-        "https://raw.githubusercontent.com/pekosong/models/master/three/model.json"
-      );
-      console.log("yolo model 로딩 완료");
+      this.myYolo = await yolo.v3tiny("https://raw.githubusercontent.com/pekosong/models/master/three/model.json");
+      console.log("yolo model 로딩 완료");     
+      
     },
     async loadmobilenet() {
-      const modelname = `https://raw.githubusercontent.com/pekosong/models/master/${
-        this.selectedename
-      }${this.numbers}/model.json`;
-      console.log(modelname, "로딩시작");
-      this.mobilenet = await tf.loadLayersModel(modelname, false);
+      console.log(
+        `https://raw.githubusercontent.com/pekosong/models/master/${
+          this.selectedename
+        }${this.numbers}/model.json`,
+        "로딩시작"
+      );
+      this.mobilenet = await tf.loadLayersModel(
+        `https://raw.githubusercontent.com/pekosong/models/master/${
+          this.selectedename
+        }${this.numbers}/model.json`,
+        false
+      );
       this.mobilenet.predict(tf.zeros([1, 224, 224, 3])).dispose();
       console.log(this.selectedename, "model 로딩완료");
     },
@@ -224,21 +158,20 @@ export default {
 
     // 과일 Detecting
     async detection() {
-      const boxes = await this.yolomodel.predict(this.$refs.canvas1, {
-        maxBoxes: 5,
-        scoreThreshold: 0.2,
-        iouThreshold: 0.5,
-        numClasses: 3,
-        classNames: ["orange", "apple", "tomato"],
-        inputSize: 416
-      });
-
+      let inputImage = tf.browser
+        .fromPixels(this.$refs.canvas1)
+        .resizeNearestNeighbor([416, 416])
+        .toFloat()
+        .div(tf.scalar(255))
+        .expandDims();
+      // const boxes = await yolo(inputImage, this.yolomodel);
+      const boxes = await yolo(inputImage, this.yolomodel);
+      console.log(boxes);
       let song = 0;
       this.makecanvas();
-
-      // Detecting
       boxes.forEach(box => {
-        const className = box.class;
+        const { className } = box;
+        console.log(className);
 
         if (this.selectedename == "fruits") {
           this.draw(box);
@@ -255,8 +188,10 @@ export default {
         }
       });
 
-      // Not Detecting
       if (song === 0) {
+        this.$refs.canvas
+          .getContext("2d")
+          .drawImage(this.$refs.canvas1, 0, 0, this.width, this.height);
         this.status = `${this.selectedname} 감지 안 됨`;
         console.log(`${this.selectedname} 없음`);
       }
@@ -269,24 +204,26 @@ export default {
 
     // Canvas의 Detecting된 과일에 Rectangle과 Label
     draw(box) {
-      const x = parseInt(box.left);
-      const y = parseInt(box.top);
-      const width = parseInt(box.width);
-      const height = parseInt(box.height);      
-      this.size = parseInt(Math.min(width, height) / 20);
+      const { top, left, bottom, right, classProb, className } = box;
+      const x = parseInt((left / 416) * this.width);
+      const y = parseInt((top / 416) * this.height);
+      const width = parseInt(((right - left) / 416) * this.width);
+      const height = parseInt(((bottom - top) / 416) * this.height);
 
       this.$refs.canvas2
         .getContext("2d")
-        .drawImage(this.$refs.canvas1, x, y, width, height, 0, 0, 300, 300);
+        .drawImage(this.$refs.canvas1, x, y, width, height, 0, 0, 400, 400);
+
+      // let image = this.$refs.canvas2.toDataURL("image/jpeg").replace("image/jpeg", "image/octet-stream")
+      // window.location.href = image;
 
       const ctx = this.$refs.canvas.getContext("2d");
       ctx.font = "40px Arial";
-      ctx.fillText(box.class, x, y - 10);
+      ctx.fillText(className, x, y - 10);
       ctx.lineWidth = "5";
       ctx.strokeStyle = "blue";
       ctx.strokeRect(x, y, width, height);
     },
-
     // Canvas2에 Detecting된 과일 분류
     async classification() {
       let inputImage = tf.browser
@@ -295,24 +232,21 @@ export default {
         .toFloat()
         .div(tf.scalar(255))
         .expandDims();
-
       let predictions = await this.mobilenet.predict(inputImage);
       let results = Array.from(predictions.dataSync());
       this.result = this.classes[this.numbers][
         results.indexOf(Math.max(...results))
       ];
-      console.log(this.result)
-      this.quality = this.result == "A급" ? 1 : 0;
       this.prob = Math.max(...results);
 
       if (this.numbers == 2) {
-        if (this.result === "A급") {
+        if (this.result === "정상") {
           this.count[this.numbers][0] += 1;
         } else {
           this.count[this.numbers][1] += 1;
         }
       } else if (this.numbers == 3) {
-        if (this.result === "A급") {
+        if (this.result === "정상") {
           this.count[this.numbers][0] += 1;
         } else if (this.result === "흡짐") {
           this.count[this.numbers][1] += 1;
@@ -320,7 +254,7 @@ export default {
           this.count[this.numbers][2] += 1;
         }
       } else {
-        if (this.result === "A급") {
+        if (this.result === "정상") {
           this.count[this.numbers][0] += 1;
         } else if (this.result === "흡짐") {
           this.count[this.numbers][1] += 1;
@@ -362,7 +296,7 @@ export default {
 }
 
 .left {
-  width: 60%;
+  width: 70%;
   height: 82vh;
   padding: 30px;
   background-color: #fff;
@@ -370,7 +304,7 @@ export default {
 }
 
 .right {
-  width: 40%;
+  width: 30%;
   height: 82vh;
   margin-left: 20px;
 }
@@ -386,7 +320,6 @@ export default {
   padding: 15px;
   background-color: #fff;
   border-radius: 10px;
-  margin-bottom: 20px;
 }
 
 .bot {
@@ -395,16 +328,9 @@ export default {
   justify-content: center;
 }
 
-.results {
-  width: 100%;
-  height: 170px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
 .container {
   display: flex;
+  align-items: center;
 }
 
 .wrapper {
