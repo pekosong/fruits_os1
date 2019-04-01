@@ -111,6 +111,7 @@
             </b-row>
           </b-container>
           <!-- Right-Bot-End -->
+
           <div>
             <h4>등급별 선별 현황</h4>
           </div>
@@ -245,6 +246,7 @@ export default {
           this.status = "분류 중";
           song += 1;
         }
+
         if (className === this.selectedename) {
           this.status = "선별 중";
           console.log(this.selectedname);
@@ -289,15 +291,16 @@ export default {
 
     // Canvas2에 Detecting된 과일 분류
     async classification() {
-      let inputImage = tf.browser
+      try {
+        const inputImage = tf.browser
         .fromPixels(this.$refs.canvas2)
         .resizeNearestNeighbor([224, 224])
         .toFloat()
         .div(tf.scalar(255))
         .expandDims();
 
-      let predictions = await this.mobilenet.predict(inputImage);
-      let results = Array.from(predictions.dataSync());
+      const predictions = await this.mobilenet.predict(inputImage);
+      const results = Array.from(predictions.dataSync());
       this.result = this.classes[this.numbers][
         results.indexOf(Math.max(...results))
       ];
@@ -314,7 +317,7 @@ export default {
       } else if (this.numbers == 3) {
         if (this.result === "A급") {
           this.count[this.numbers][0] += 1;
-        } else if (this.result === "흡짐") {
+        } else if (this.result === "B급") {
           this.count[this.numbers][1] += 1;
         } else {
           this.count[this.numbers][2] += 1;
@@ -322,14 +325,16 @@ export default {
       } else {
         if (this.result === "A급") {
           this.count[this.numbers][0] += 1;
-        } else if (this.result === "흡짐") {
+        } else if (this.result === "B급") {
           this.count[this.numbers][1] += 1;
-        } else if (this.result === "멍") {
+        } else if (this.result === "C급") {
           this.count[this.numbers][2] += 1;
         } else {
           this.count[this.numbers][3] += 1;
         }
       }
+      }
+    catch (err) {}
 
       this.show = false;
       this.show = true;
