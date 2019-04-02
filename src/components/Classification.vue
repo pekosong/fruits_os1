@@ -331,43 +331,6 @@ export default {
       this.tracker[this.idx]["size"] = "측정중";
       this.idx += 1;
     },
-    finddistance(afters, boxes) {
-      let befores = [];
-
-      const dists = [];
-      const new_afters = [];
-      const new_boxes = [];
-
-      let dst = [];
-      let last = {};
-
-      // tracker들의 각 마지막 위치를 구함
-      Object.keys(this.tracker).forEach(key => {
-        if (this.tracker[key]["gone"] == false) {          
-          Object.keys(this.tracker[key]["pos"]).forEach(i => {
-            last = this.tracker[key]["pos"][i];
-          });
-        }
-        befores.push(last);
-      });
-      console.log(befores.length)
-
-      // 가장 가까운 거리를 구함
-      befores.forEach(before => {
-        afters.forEach(after => {
-          dst.push(this.caldistance(before, after));
-        });
-        let idx = dst.indexOf(Math.min(...dst));
-
-        new_afters.push(afters[idx]);
-        new_boxes.push(boxes[idx]);
-        dists.push(dst[idx]);
-
-        dst = [];
-      });
-      // 가장 가까운 거리들 다음 위치와 박스 그리고 거리를 반환
-      return [new_afters, new_boxes, dists];
-    },
     caldistance(obj1, obj2) {
       const x1 = obj1["x"];
       const y1 = obj1["y"];
@@ -402,6 +365,44 @@ export default {
       ctx.lineWidth = "5";
       ctx.strokeStyle = "yellow";
       ctx.strokeRect(x, y, width, height);
+    },
+
+    finddistance(afters, boxes) {
+      let befores = [];
+
+      const dists = [];
+      const new_afters = [];
+      const new_boxes = [];
+
+      let dst = [];
+      let last = {};
+
+      // tracker들의 각 마지막 위치를 구함
+      Object.keys(this.tracker).forEach(key => {
+        if (this.tracker[key]["gone"] == false) {
+          Object.keys(this.tracker[key]["pos"]).forEach(i => {
+            last = this.tracker[key]["pos"][i];
+          });
+        }
+        befores.push(last);
+      });
+      console.log(befores.length);
+      console.log(befores);
+      // 가장 가까운 거리를 구함
+      befores.forEach(before => {
+        afters.forEach(after => {
+          dst.push(this.caldistance(before, after));
+        });
+        let idx = dst.indexOf(Math.min(...dst));
+
+        new_afters.push(afters[idx]);
+        new_boxes.push(boxes[idx]);
+        dists.push(dst[idx]);
+
+        dst = [];
+      });
+      // 가장 가까운 거리들 다음 위치와 박스 그리고 거리를 반환
+      return [new_afters, new_boxes, dists];
     },
     updateposition(boxes) {
       if (boxes.length > 0) {
