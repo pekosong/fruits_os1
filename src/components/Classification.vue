@@ -174,7 +174,9 @@ export default {
       height: 600,
       size: 0,
       quality: 1,
-      color: 1
+      color: 1,
+      tracker: {},
+      idx: 1
     };
   },
   mounted() {
@@ -193,7 +195,7 @@ export default {
     this.loadmobilenet();
     setInterval(() => {
       this.play();
-    }, 500);
+    }, 200);
   },
   methods: {
     async loadyolomodel1() {
@@ -227,7 +229,7 @@ export default {
     async detection() {
       const boxes = await this.yolomodel.predict(this.$refs.canvas1, {
         maxBoxes: 5,
-        scoreThreshold: 0.2,
+        scoreThreshold: 0.5,
         iouThreshold: 0.5,
         numClasses: 3,
         classNames: ["orange", "apple", "tomato"],
@@ -238,24 +240,15 @@ export default {
       this.makecanvas();
 
       // Detecting
-      boxes.forEach(box => {
-        const className = box.class;
-
-        if (this.selectedename == "fruits") {
-          this.draw(box);
-          this.status = "분류 중";
-          song += 1;
-        }
-
-        if (className === this.selectedename) {
-          this.status = "선별 중";
-          console.log(this.selectedname);
-
-          this.draw(box);
-          this.classification();
-          song += 1;
-        }
-      });
+      if (this.selectedename == "fruits") {
+        this.tracker.updateposition(boxes);
+        this.status = "분류 중";
+        song += 1;
+      } else {
+        this.status = "선별 중";
+        this.updateposition(boxes);
+        song += 1;
+      }
 
       // Not Detecting
       if (song === 0) {
@@ -269,72 +262,53 @@ export default {
         .drawImage(this.$refs.canvas1, 0, 0, this.width, this.height);
     },
 
-    // Canvas의 Detecting된 과일에 Rectangle과 Label
-    draw(box) {
-      const x = parseInt(box.left);
-      const y = parseInt(box.top);
-      const width = parseInt(box.width);
-      const height = parseInt(box.height);      
-      this.size = parseInt(Math.min(width, height) / 20);
-
-      this.$refs.canvas2
-        .getContext("2d")
-        .drawImage(this.$refs.canvas1, x, y, width, height, 0, 0, 300, 300);
-
-      const ctx = this.$refs.canvas.getContext("2d");
-      ctx.font = "40px Arial";
-      ctx.fillText(box.class, x, y - 10);
-      ctx.lineWidth = "5";
-      ctx.strokeStyle = "blue";
-      ctx.strokeRect(x, y, width, height);
-    },
-
     // Canvas2에 Detecting된 과일 분류
-    async classification() {
+    classification(box) {
       try {
+        const x = parseInt(box.left);
+        const y = parseInt(box.top);
+        const width = parseInt(box.width);
+        const height = parseInt(box.height);
+
+        this.$refs.canvas2
+          .getContext("2d")
+          .drawImage(this.$refs.canvas1, x, y, width, height, 0, 0, 300, 300);
+
         const inputImage = tf.browser
-        .fromPixels(this.$refs.canvas2)
-        .resizeNearestNeighbor([224, 224])
-        .toFloat()
-        .div(tf.scalar(255))
-        .expandDims();
+          .fromPixels(this.$refs.canvas2)
+          .resizeNearestNeighbor([224, 224])
+          .toFloat()
+          .div(tf.scalar(255))
+          .expandDims();
 
-      const predictions = await this.mobilenet.predict(inputImage);
-      const results = Array.from(predictions.dataSync());
-      this.result = this.classes[this.numbers][
-        results.indexOf(Math.max(...results))
-      ];
-      console.log(this.result)
-      this.quality = this.result == "A급" ? 1 : 0;
-      this.prob = Math.max(...results);
+        const predictions = this.mobilenet.predict(inputImage);
+        const results = Array.from(predictions.dataSync());
+        const result = this.classes[this.numbers][
+          results.indexOf(Math.max(...results))
+        ];
 
-      if (this.numbers == 2) {
-        if (this.result === "A급") {
-          this.count[this.numbers][0] += 1;
-        } else {
-          this.count[this.numbers][1] += 1;
+        this.quality = result == "A급" ? 1 : 0;
+        this.prob = Math.max(...results);
+
+        if (this.numbers == 2) {
+          if (result === "A급") {
+            this.count[this.numbers][0] += 1;
+          } else {
+            this.count[this.numbers][1] += 1;
+          }
+        } else if (this.numbers == 3) {
+          if (result === "A급") {
+            this.count[this.numbers][0] += 1;
+          } else if (this.result === "B급") {
+            this.count[this.numbers][1] += 1;
+          } else {
+            this.count[this.numbers][2] += 1;
+          }
         }
-      } else if (this.numbers == 3) {
-        if (this.result === "A급") {
-          this.count[this.numbers][0] += 1;
-        } else if (this.result === "B급") {
-          this.count[this.numbers][1] += 1;
-        } else {
-          this.count[this.numbers][2] += 1;
-        }
-      } else {
-        if (this.result === "A급") {
-          this.count[this.numbers][0] += 1;
-        } else if (this.result === "B급") {
-          this.count[this.numbers][1] += 1;
-        } else if (this.result === "C급") {
-          this.count[this.numbers][2] += 1;
-        } else {
-          this.count[this.numbers][3] += 1;
-        }
+        return result;
+      } catch (err) {
+        console.log(err);
       }
-      }
-    catch (err) {}
 
       this.show = false;
       this.show = true;
@@ -343,6 +317,194 @@ export default {
       this.$emit("backto-home");
       this.yolomodel = null;
       this.mobilenet = null;
+    },
+    maketracker(pos, cls, box) {
+      this.tracker[this.idx] = {};
+      this.tracker[this.idx]["id"] = this.idx;
+      this.tracker[this.idx]["pos"] = pos;
+      this.tracker[this.idx]["cls"] = cls;
+      this.tracker[this.idx]["dis"] = 0;
+      this.tracker[this.idx]["gone"] = false;
+      this.tracker[this.idx]["updated"] = false;
+      this.tracker[this.idx]["box"] = box;
+      this.tracker[this.idx]["grade"] = "선별중";
+      this.tracker[this.idx]["size"] = "측정중";
+      this.idx += 1;
+    },
+    finddistance(afters, boxes) {
+      let befores = [];
+
+      const dists = [];
+      const new_afters = [];
+      const new_boxes = [];
+
+      let dst = [];
+      let last = {};
+
+      // tracker들의 각 마지막 위치를 구함
+      Object.keys(this.tracker).forEach(key => {
+        if (this.tracker[key]["gone"] == false) {          
+          Object.keys(this.tracker[key]["pos"]).forEach(i => {
+            last = this.tracker[key]["pos"][i];
+          });
+        }
+        befores.push(last);
+      });
+      console.log(befores.length)
+
+      // 가장 가까운 거리를 구함
+      befores.forEach(before => {
+        afters.forEach(after => {
+          dst.push(this.caldistance(before, after));
+        });
+        let idx = dst.indexOf(Math.min(...dst));
+
+        new_afters.push(afters[idx]);
+        new_boxes.push(boxes[idx]);
+        dists.push(dst[idx]);
+
+        dst = [];
+      });
+      // 가장 가까운 거리들 다음 위치와 박스 그리고 거리를 반환
+      return [new_afters, new_boxes, dists];
+    },
+    caldistance(obj1, obj2) {
+      const x1 = obj1["x"];
+      const y1 = obj1["y"];
+      const x2 = obj2["x"];
+      const y2 = obj2["y"];
+
+      // obj1과 obj2의 거리를 구함
+      return Math.sqrt(
+        Math.pow(Math.abs(x2 - x1), 2) + Math.pow(Math.abs(y2 - y1), 2)
+      );
+    },
+
+    // Canvas의 Detecting된 과일에 Rectangle과 Label
+    draw(box, id, cls, grade, size) {
+      const x = parseInt(box.left);
+      const y = parseInt(box.top);
+      const width = parseInt(box.width);
+      const height = parseInt(box.height);
+
+      this.size = parseInt(Math.min(width, height) / 20);
+
+      this.$refs.canvas2
+        .getContext("2d")
+        .drawImage(this.$refs.canvas1, x, y, width, height, 0, 0, 300, 300);
+
+      const ctx = this.$refs.canvas.getContext("2d");
+      ctx.font = "30px sans-serif";
+      ctx.fillText(`id:${id}-${cls} `, x, y - 10);
+      ctx.font = "30px sans-serif";
+      ctx.fillText(`${grade}`, x + width / 2 - 25, y + height / 2 - 20);
+      ctx.fillText(`${size}cm`, x + width / 2 - 15, y + height / 2 + 20);
+      ctx.lineWidth = "5";
+      ctx.strokeStyle = "yellow";
+      ctx.strokeRect(x, y, width, height);
+    },
+    updateposition(boxes) {
+      if (boxes.length > 0) {
+        const afters = [];
+
+        // boxes에서 cx, cy 값 반환
+        boxes.forEach(box => {
+          const x = box.left - box.width / 2;
+          const y = box.top - box.height / 2;
+          afters.push({ x: x, y: y });
+        });
+
+        // 현재 trackers 내 거리와 새로운 boxes의 거리를 구함
+        const results = this.finddistance(afters, boxes);
+        const new_afters = results[0];
+        const new_boxes = results[1];
+        const new_dist = results[2];
+        // 거리가 가까운 순으로 정렬된 index 계산
+        const len = new_dist.length;
+        const indices = new Array(len);
+        for (var i = 0; i < len; ++i) indices[i] = i;
+        indices.sort(function(a, b) {
+          return new_dist[a] < new_dist[b]
+            ? -1
+            : new_dist[a] > new_dist[b]
+            ? 1
+            : 0;
+        });
+
+        // 현재 시각 구함
+        const now = new Date().getTime();
+
+        // tracker의 key를 list로 가져옴
+        const ppl = Object.keys(this.tracker);
+
+        let z = 0;
+
+        // 가장 가까운 순으로 정렬된 index를 id로 하여 새로운 tracker들을 update
+        indices.forEach(id => {
+          if (z < afters.length && z < ppl.length && z < new_boxes.length) {
+            if (
+              !this.tracker[ppl[id]]["updated"] &&
+              !this.tracker[ppl[id]]["gone"]
+            ) {
+              this.tracker[ppl[id]]["dis"] = 0;
+              this.tracker[ppl[id]]["pos"][now] = new_afters[id];
+              this.tracker[ppl[id]]["box"] = new_boxes[id];
+              this.tracker[ppl[id]]["updated"] = true;
+              this.draw(
+                new_boxes[id],
+                this.tracker[ppl[id]]["id"],
+                this.tracker[ppl[id]]["cls"],
+                this.tracker[ppl[id]]["grade"],
+                this.tracker[ppl[id]]["size"]
+              );
+              if (this.tracker[ppl[id]]["grade"] == "선별중") {
+                this.tracker[ppl[id]]["grade"] = this.classification(
+                  new_boxes[id]
+                );
+                this.tracker[ppl[id]]["size"] = parseInt(
+                  Math.min(new_boxes[id]["width"], new_boxes[id]["height"]) / 20
+                );
+              }
+
+              // console.log(this.tracker[ppl[id]]);
+              z += 1;
+            }
+          }
+        });
+
+        Object.keys(this.tracker).forEach(key => {
+          if (!this.tracker[key]["updated"]) {
+            this.tracker[key]["dis"] += 1;
+            if (this.tracker[key]["dis"] > 10 && !this.tracker[key]["gone"]) {
+              this.tracker[key]["gone"] = true;
+              console.log(this.tracker[key]["id"], "제거");
+            }
+          }
+          this.tracker[key]["updated"] = false;
+        });
+
+        if (boxes.length > z) {
+          boxes.splice(z).forEach(box => {
+            console.log("등록");
+            const new_tracker = {};
+            const x = box.left - box.width / 2;
+            const y = box.top - box.height / 2;
+
+            new_tracker[now] = { x: x, y: y };
+            if (box.class == this.selectedename) {
+              this.maketracker(new_tracker, box.class, box);
+            }
+          });
+        }
+      } else {
+        Object.keys(this.tracker).forEach(key => {
+          this.tracker[key]["dis"] += 1;
+          if (this.tracker[key]["dis"] > 10 && !this.tracker[key]["gone"]) {
+            this.tracker[key]["gone"] = true;
+            console.log(this.tracker[key]["id"], "제거");
+          }
+        });
+      }
     }
   }
 };
