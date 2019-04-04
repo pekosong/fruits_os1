@@ -96,11 +96,11 @@
                           <div>
                             <img
                               :src="selectedimg"
-                              :style="{filter:'grayscale(' + (100 - (100 / 1 * quality)) + '%)'}"
+                              :style="{filter:'grayscale(' + (100 - (100 / 1 * ((item['grade'] == 'A급') ? 1 : 0) )) + '%)'}"
                               style="width: 45px"
                             >
                             <div>
-                              <b-button size="sm" v-if="quality" variant="info">정상</b-button>
+                              <b-button size="sm" v-if="item['grade'] == 'A급'" variant="info">정상</b-button>
                               <b-button size="sm" v-else variant="danger">비정상</b-button>
                             </div>
                           </div>
@@ -124,8 +124,7 @@
                           <div>
                             <img
                               :src="selectedimg"
-                              :style="{filter:'grayscale(' + 0 + '%)'}"
-                              style="width: 45px"
+                              :width="'45px'"
                             >
                             <div>
                               <b-button size="sm" variant="info">{{item['size']}}cm</b-button>
@@ -239,7 +238,7 @@ export default {
     async detection() {
       const boxes = await this.yolomodel.predict(this.$refs.canvas1, {
         maxBoxes: 5,
-        scoreThreshold: 0.5,
+        scoreThreshold: 0.6,
         iouThreshold: 0.5,
         numClasses: 3,
         classNames: ["orange", "apple", "tomato"],
