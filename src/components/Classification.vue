@@ -12,123 +12,97 @@
       <!-- Main -->
       <div class="main">
         <!-- Left -->
-        <div class="left">
-          <div class="center">
-            <div>
-              <h1>딥러닝 기반 과일 선별중 by OS1</h1>
-            </div>
-            <div class="center">
-              <video ref="video" id="video" width="800px" height="600px" autoplay v-show="false"></video>
-              <canvas
-                style="border-radius: 10px;"
-                ref="canvas"
-                id="canvas"
-                width="800px"
-                height="600px"
-                v-show="true"
-              ></canvas>
-              <canvas ref="canvas1" id="canvas1" width="800px" height="600px" v-show="false"></canvas>
-              <canvas
-                style="border-radius: 10px;"
-                ref="cropfruits"
-                id="cropfruits"
-                width="300px"
-                height="300px"
-                v-show="false"
-              ></canvas>
-            </div>
-          </div>
-        </div>
+        <b-container class="left">
+          <b-row class="title">실시간 선별 영상 - Real Time</b-row>
+          <b-row class="left-video">
+            <video ref="video" id="video" width="1024px" height="768px" autoplay v-show="false"></video>
+            <canvas ref="canvas" id="canvas" width="1024px" height="768px" v-show="true"></canvas>
+            <canvas ref="canvas1" id="canvas1" width="1024px" height="768px" v-show="false"></canvas>
+            <canvas
+              style="border-radius: 10px;"
+              ref="cropfruits"
+              id="cropfruits"
+              width="300px"
+              height="300px"
+              v-show="false"
+            ></canvas>
+          </b-row>
+        </b-container>
         <!-- Left-End -->
 
         <!-- Right -->
         <div class="right">
-          <!-- Right-Bot -->
-          <div>
-            <h4>등급별 선별 현황</h4>
-          </div>
+          <!-- Right-Top -->
+
           <b-container class="right-top">
-            <b-row class="results">
-              <b-col v-for="n in numbers" :key="n" v-show="show" class="center">
-                <img
-                  :src="selectedimg"
-                  :style="{filter:'grayscale(' + (100 - (100 / n)) + '%)'}"
-                  style="width: 100px;"
-                >
+            <b-row class="title">과일 선별 집계 현황</b-row>
+            <b-row class="text p-4">
+              <b-col v-for="n in numbers" :key="n" v-show="show">
                 <b-button
                   size="lg"
                   block
-                  variant="dark"
+                  variant="warning"
                 >{{ classes[numbers][n-1] }} - {{ count[numbers][n-1]}} 개</b-button>
               </b-col>
             </b-row>
           </b-container>
 
-          <div>
-            <h4>등급 선별 결과</h4>
-          </div>
+          <!-- Right-Top-End -->
+
+          <!-- Right-Bot -->
           <b-container class="right-bot">
-            <b-row>
-              <b-col v-show="show" style="width: 670px">
+            <b-row class="title">과일 선별 결과 누적</b-row>
+            <b-row class="text">
+              <b-col v-show="show">
                 <b-card
                   v-for="(item, index) in oldtracker.slice().reverse().slice(0,5)"
                   :key="index"
                   no-body
-                  class="mb-1"
-                  style="max-height: 120px; border-bottom: 1px solid black;"
+                  class="card"                  
                 >
                   <b-row no-gutters class="p-1">
-                    <b-col style="margin-top:2px" md="2">
-                      <b-card-img :src="item['img']" class="rounded-0"></b-card-img>
+                    <b-col md="2">
+                      <b-card-img :src="item['img']"></b-card-img>
                     </b-col>
                     <b-col md="10">
-                      <b-row align-h="center" class="text-center">
-                        <b-col style="margin-top:15px" md="2">
+                      <b-row class="text-center">
+                        <b-col style="margin-top:20px" md="3">
                           <div>
                             <h4>ID:{{item["id"]}}</h4>
                           </div>
                           <div>
-                            <h3>{{item["grade"]}}</h3>
+                            <h4>{{item["grade"]}}</h4>
                           </div>
                         </b-col>
                         <b-col md="3">
                           <div>흡집</div>
+                          <img
+                            :src="selectedimg"
+                            :style="{filter:'grayscale(' + (100 - (100 / 1 * ((item['grade'] == 'A급') ? 1 : 0) )) + '%)'}"
+                            style="width: 45px"
+                          >
                           <div>
-                            <img
-                              :src="selectedimg"
-                              :style="{filter:'grayscale(' + (100 - (100 / 1 * ((item['grade'] == 'A급') ? 1 : 0) )) + '%)'}"
-                              style="width: 45px"
-                            >
-                            <div>
-                              <b-button size="sm" v-if="item['grade'] == 'A급'" variant="info">정상</b-button>
-                              <b-button size="sm" v-else variant="danger">비정상</b-button>
-                            </div>
+                            <b-button size="sm" v-if="item['grade'] == 'A급'" variant="info">정상</b-button>
+                            <b-button size="sm" v-else variant="danger">비정상</b-button>
                           </div>
                         </b-col>
                         <b-col md="3">
                           <div>색깔</div>
+                          <img
+                            :src="selectedimg"
+                            :style="{filter:'grayscale(' + (100 - (100 / 1 * 1)) + '%)'}"
+                            style="width: 45px"
+                          >
                           <div>
-                            <img
-                              :src="selectedimg"
-                              :style="{filter:'grayscale(' + (100 - (100 / 1 * color)) + '%)'}"
-                              style="width: 45px"
-                            >
-                            <div>
-                              <b-button size="sm" v-if="color" variant="info">정상</b-button>
-                              <b-button size="sm" v-else variant="danger">비정상</b-button>
-                            </div>
+                            <b-button size="sm" v-if="1" variant="info">정상</b-button>
+                            <b-button size="sm" v-else variant="danger">비정상</b-button>
                           </div>
                         </b-col>
                         <b-col md="3">
                           <div>크기</div>
+                          <img :src="selectedimg" :width="'45px'">
                           <div>
-                            <img
-                              :src="selectedimg"
-                              :width="'45px'"
-                            >
-                            <div>
-                              <b-button size="sm" variant="info">{{item['size']}}cm</b-button>
-                            </div>
+                            <b-button size="sm" variant="info">{{item['size']}}cm</b-button>
                           </div>
                         </b-col>
                       </b-row>
@@ -138,6 +112,7 @@
               </b-col>
             </b-row>
           </b-container>
+          <!-- Right-Bot-End -->
         </div>
         <!-- Right End -->
       </div>
@@ -175,13 +150,9 @@ export default {
         4: [0, 0, 0, 0]
       },
       result: "",
-      prob: 0,
       show: true,
-      width: 800,
-      height: 600,
-      size: 0,
-      quality: 1,
-      color: 1,
+      width: 1024,
+      height: 768,
       tracker: [],
       oldtracker: [],
       idx: 1,
@@ -200,14 +171,14 @@ export default {
           console.log(err);
         });
     }
-    this.loadyolomodel1();
+    this.loadyolomodel();
     this.loadmobilenet();
     setInterval(() => {
       this.play();
-    }, 200);
+    }, 100);
   },
   methods: {
-    async loadyolomodel1() {
+    async loadyolomodel() {
       this.yolomodel = await yolo.v3tiny(
         "https://raw.githubusercontent.com/pekosong/models/master/three/model.json"
       );
@@ -225,68 +196,62 @@ export default {
 
     // Loop 시작
     play() {
-      try {
-        this.$refs.canvas1
-          .getContext("2d")
-          .drawImage(this.$refs.video, 0, 0, this.width, this.height);
-
+      this.$refs.canvas1
+        .getContext("2d")
+        .drawImage(this.$refs.video, 0, 0, this.width, this.height);
+      if (this.yolomodel && this.mobilenet) {
         this.detection();
-      } catch (err) {}
+      }
     },
 
     // 과일 Detecting
     async detection() {
       const boxes = await this.yolomodel.predict(this.$refs.canvas1, {
         maxBoxes: 5,
-        scoreThreshold: 0.6,
-        iouThreshold: 0.5,
+        scoreThreshold: 0.8,
+        iouThreshold: 0.8,
         numClasses: 3,
         classNames: ["orange", "apple", "tomato"],
         inputSize: 416
       });
 
-      let song = 0;
+      let classes = [];
       this.makecanvas();
+
+      boxes.forEach(el => classes.push(el.class));
 
       // Detecting
       if (this.selectedename == "fruits") {
-        this.tracker.updateposition(boxes);
         this.status = "분류 중";
-        song += 1;
-      } else {
-        this.status = "선별 중";
         this.updateposition(boxes);
-        song += 1;
-      }
-
-      // Not Detecting
-      if (song === 0) {
+      } else if (classes.includes(this.selectedename)) {
+        this.status = "선별 중";
+        let filteredboxses = boxes.filter(
+          box => box.class == this.selectedename
+        );
+        this.updateposition(filteredboxses);
+      } else {
+        this.updateposition();
         this.status = `${this.selectedname} 감지 안 됨`;
-        console.log(`${this.selectedname} 없음`);
       }
     },
     makecanvas() {
       this.$refs.canvas
         .getContext("2d")
-        .drawImage(this.$refs.canvas1, 0, 0, this.width, this.height);
+        .drawImage(this.$refs.canvas1, 0, 0, 1024, 768);
     },
 
     // Canvas2에 Detecting된 과일 분류
     classification(box) {
       try {
-        const left = parseInt(box.left);
-        const top = parseInt(box.top);
-        const width = parseInt(box.width);
-        const height = parseInt(box.height);
-
         this.$refs.cropfruits
           .getContext("2d")
           .drawImage(
             this.$refs.canvas1,
-            left,
-            top,
-            width,
-            height,
+            box.left,
+            box.top,
+            box.width,
+            box.height,
             0,
             0,
             300,
@@ -306,9 +271,6 @@ export default {
         const result = this.classes[this.numbers][
           results.indexOf(Math.max(...results))
         ];
-        this.quality = result == "A급" ? 1 : 0;
-        this.prob = Math.max(...results);
-
         if (this.numbers == 2) {
           if (result === "A급") {
             this.count[this.numbers][0] += 1;
@@ -331,60 +293,76 @@ export default {
       this.show = false;
       this.show = true;
     },
+
     backtohome() {
       this.$emit("backto-home");
       this.yolomodel = null;
       this.mobilenet = null;
     },
-    maketracker(pos, cls, box, now) {
-      this.tracker[this.idx] = {};
-      this.tracker[this.idx]["id"] = this.idx;
 
+    maketracker(pos, cls, box, now) {
       const cx = box.left - box.width / 2;
       const cy = box.top - box.height / 2;
-      this.tracker[this.idx]["last_pos"] = { cx: cx, cy: cy };
+      const newtracker = {
+        id: this.idx,
+        date: `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`,
+        hour: `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`,
+        last_pos: { cx: cx, cy: cy },
+        pos: pos,
+        come: 0,
+        dis: 0,
+        cls: cls,
+        gone: false,
+        updated: false,
+        box: box,
+        grade: "선별중",
+        img: "",
+        size: parseInt(Math.min(box.width, box.height) / 20)
+      };
+      this.tracker.push(newtracker);
 
-      this.tracker[this.idx]["day"] = `${now.getMonth() +
-        1}월 ${now.getDate()}일`;
-      this.tracker[this.idx][
-        "hr"
-      ] = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
-      this.tracker[this.idx]["pos"] = pos;
-      this.tracker[this.idx]["come"] = 0;
-      this.tracker[this.idx]["dis"] = 0;
-      this.tracker[this.idx]["cls"] = cls;
-      this.tracker[this.idx]["gone"] = false;
-      this.tracker[this.idx]["updated"] = false;
-      this.tracker[this.idx]["box"] = box;
-      this.tracker[this.idx]["grade"] = "선별중";
-      this.tracker[this.idx]["img"] = "";
-
-      this.tracker[this.idx]["size"] = parseInt(
-        Math.min(box.width, box.height) / 20
-      );
       this.idx += 1;
       (this.show = false), (this.show = true);
     },
     caldistance(obj1, obj2) {
-      const cx1 = obj1["cx"];
-      const cy1 = obj1["cy"];
-      const cx2 = obj2["cx"];
-      const cy2 = obj2["cy"];
-
       // obj1과 obj2의 거리를 구함
       return Math.sqrt(
-        Math.pow(Math.abs(cx2 - cx1), 2) + Math.pow(Math.abs(cy2 - cy1), 2)
+        Math.pow(Math.abs(obj2.cx - obj1.cx), 2) +
+          Math.pow(Math.abs(obj2.cy - obj1.cy), 2)
       );
     },
-
+    removeTrackers() {
+      Object.keys(this.tracker).forEach(key => {
+        if (!this.tracker[key]["updated"]) {
+          this.tracker[key]["dis"] += 1;
+          if (this.tracker[key]["dis"] > 10) {
+            console.log("올드에 등록");
+            this.oldtracker.push(this.tracker[key]);
+            delete this.tracker[key];
+            console.log("제거");
+          }
+        }
+        if (this.tracker[key]) {
+          this.tracker[key]["updated"] = false;
+        }
+      });
+    },
     // Canvas의 Detecting된 과일에 Rectangle과 Label
-    draw(box,  cls, id, grade, size) {
+    draw(box, cls, id, grade, size) {
       const ctx = this.$refs.canvas.getContext("2d");
       ctx.font = "30px sans-serif";
       ctx.fillText(`id:${id}-${cls} `, box.left, box.top - 10);
       ctx.font = "30px sans-serif";
-      ctx.fillText(`${grade}`, box.left + box.width / 2 - 25, box.top + box.height / 2 - 20);
-      ctx.fillText(`${size}cm`, box.leftft + box.width / 2 - 15, box.top + box.height / 2 + 20);
+      ctx.fillText(
+        `${grade}`,
+        box.left + box.width / 2 - 25,
+        box.top + box.height / 2 - 20
+      );
+      ctx.fillText(
+        `${size}cm`,
+        box.leftft + box.width / 2 - 15,
+        box.top + box.height / 2 + 20
+      );
       ctx.lineWidth = "5";
       ctx.strokeStyle = "yellow";
       ctx.strokeRect(box.left, box.top, box.width, box.height);
@@ -398,9 +376,8 @@ export default {
       let dst = [];
 
       // tracker들의 각 마지막 위치를 구함
-      Object.keys(this.tracker).forEach(key => {
-        const last = this.tracker[key]["last_pos"];
-        befores.push(last);
+      this.tracker.forEach(tracker => {
+        befores.push(tracker["last_pos"]);
       });
 
       // 가장 가까운 거리를 구함
@@ -420,7 +397,7 @@ export default {
       return [new_afters, new_boxes, dists];
     },
     updateposition(boxes) {
-      try {
+      if (boxes) {
         const afters = [];
 
         // boxes에서 cx, cy 값 반환
@@ -453,7 +430,6 @@ export default {
 
         // tracker의 key를 list로 가져옴
         const ppl = Object.keys(this.tracker);
-
         let z = 0;
 
         // 가장 가까운 순으로 정렬된 index를 id로 하여 새로운 tracker들을 update
@@ -486,22 +462,7 @@ export default {
             }
           }
         });
-
-        Object.keys(this.tracker).forEach(key => {
-          if (!this.tracker[key]["updated"]) {
-            this.tracker[key]["dis"] += 1;
-            if (this.tracker[key]["dis"] > 10) {
-              console.log("올드에 등록");
-              this.oldtracker.push(this.tracker[key]);
-              console.log(this.oldtracker);
-              delete this.tracker[key];
-              console.log("제거");
-            }
-          }
-          try {
-            this.tracker[key]["updated"] = false;
-          } catch (err) {}
-        });
+        this.removeTrackers();
 
         function song(box) {
           const cx = box.left - box.width / 2;
@@ -520,8 +481,8 @@ export default {
             this.maketracker(new_tracker, box.class, box, now);
           });
         }
-      } catch (err) {
-        console.log(err);
+      } else {
+        this.removeTrackers();
       }
     }
   }
@@ -539,59 +500,71 @@ export default {
   background: #dfe6e9;
 }
 
-.top {
-  margin-bottom: 10px;
+.top {  
+  height: 5vh;
 }
+
 .main {
   display: flex;
 }
 
+.wrapper {
+  margin: 10px;
+}
+
 .left {
-  width: 60%;
-  height: 82vh;
-  padding: 30px;
+  width: 63%;
+  height: 85vh;
   background-color: #fff;
-  border-radius: 10px;
+  border-radius: 3px;
+}
+
+.left-video {
+  padding: 20px;
+  padding-top: 45px;
 }
 
 .right {
-  width: 40%;
-  height: 82vh;
-  margin-left: 20px;
+  width: 37%;
+  height: 85vh;
+  margin-left: 15px;
 }
 
 .right-top {
-  padding: 15px;
-  border-radius: 10px;
-  margin-bottom: 10px;
-  background-color: #fff;
+  height: 20%;
+  border-radius: 3px;
 }
 
 .right-bot {
-  min-height: 55vh;
+  height: 80%;
   width: 100%;
-  padding: 10px;
-  border-radius: 10px;
+  border-radius: 3px;
   background-color: #fff;
 }
 
+.title {
+  background-color: #303952;
+  color: white;
+  padding: 10px;
+  font-size: 1.3rem;
+}
+
+.text {
+  color: black;
+  padding: 15px 0px;
+  background-color: #fff;
+}
+
+.card {  
+  padding: 3px;
+  margin-bottom: 5px;
+  border-bottom: 2px solid black;
+  border-right: 2px solid black;
+}
+
 .bot {
-  margin-top: 20px;
+  padding: 20px;
   display: flex;
   justify-content: center;
-}
-
-.results {
-  margin-left: 0;
-  width: 100%;
-  height: 150px;
-}
-
-.container {
-  display: flex;
-}
-
-.wrapper {
-  margin: 30px;
 }
 </style>

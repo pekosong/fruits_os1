@@ -33,7 +33,6 @@
     width: 90vw;
     margin: 0 10vw;
     height: 100vh;
-    background: #dfe6e9;
   }
 
   .center {
