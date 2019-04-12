@@ -58,7 +58,7 @@
                   v-for="(item, index) in oldtracker.slice().reverse().slice(0,5)"
                   :key="index"
                   no-body
-                  class="card"                  
+                  class="card"
                 >
                   <b-row no-gutters class="p-1">
                     <b-col md="2">
@@ -208,9 +208,10 @@ export default {
     async detection() {
       const boxes = await this.yolomodel.predict(this.$refs.canvas1, {
         maxBoxes: 5,
-        scoreThreshold: 0.8,
-        iouThreshold: 0.8,
+        scoreThreshold: 0.2,
+        iouThreshold: 0.5,
         numClasses: 3,
+        anchors: [10, 14, 23, 27, 37, 58, 81, 82, 135, 169, 344, 319],
         classNames: ["orange", "apple", "tomato"],
         inputSize: 416
       });
@@ -259,14 +260,9 @@ export default {
           );
         const img = this.$refs.cropfruits.toDataURL("image/png");
 
-        const inputImage = tf.browser
-          .fromPixels(this.$refs.cropfruits)
-          .resizeNearestNeighbor([224, 224])
-          .toFloat()
-          .div(tf.scalar(255))
-          .expandDims();
-
+        const inputImage = this.preProcess(this.$refs.cropfruits);
         const predictions = this.mobilenet.predict(inputImage);
+
         const results = Array.from(predictions.dataSync());
         const result = this.classes[this.numbers][
           results.indexOf(Math.max(...results))
@@ -294,43 +290,46 @@ export default {
       this.show = true;
     },
 
+    preProcess(img) {
+      let offset = tf.scalar(127.5);
+      return tf.browser
+        .fromPixels(img)
+        .resizeNearestNeighbor([224, 224])
+        .toFloat()
+        .sub(offset)
+        .div(offset)
+        .expandDims();
+    },
+
     backtohome() {
       this.$emit("backto-home");
       this.yolomodel = null;
       this.mobilenet = null;
     },
 
-    maketracker(pos, cls, box, now) {
-      const cx = box.left - box.width / 2;
-      const cy = box.top - box.height / 2;
+    maketracker(box, now) {
       const newtracker = {
         id: this.idx,
         date: `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`,
         hour: `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`,
-        last_pos: { cx: cx, cy: cy },
-        pos: pos,
-        come: 0,
-        dis: 0,
-        cls: cls,
+        last_pos: { cx: box["cx"], cy: box["cy"] },
+        pos: { now: { cx: box["cx"], cy: box["cy"] } },
+        cls: box["class"],
         gone: false,
         updated: false,
         box: box,
         grade: "선별중",
         img: "",
-        size: parseInt(Math.min(box.width, box.height) / 20)
+        size: parseInt(Math.min(box.width, box.height) / 20),
+        come: 0,
+        dis: 0
       };
+      console.log("등록 완료");
       this.tracker.push(newtracker);
-
       this.idx += 1;
       (this.show = false), (this.show = true);
     },
-    caldistance(obj1, obj2) {
-      // obj1과 obj2의 거리를 구함
-      return Math.sqrt(
-        Math.pow(Math.abs(obj2.cx - obj1.cx), 2) +
-          Math.pow(Math.abs(obj2.cy - obj1.cy), 2)
-      );
-    },
+
     removeTrackers() {
       Object.keys(this.tracker).forEach(key => {
         if (!this.tracker[key]["updated"]) {
@@ -347,6 +346,7 @@ export default {
         }
       });
     },
+
     // Canvas의 Detecting된 과일에 Rectangle과 Label
     draw(box, cls, id, grade, size) {
       const ctx = this.$refs.canvas.getContext("2d");
@@ -355,29 +355,42 @@ export default {
       ctx.font = "30px sans-serif";
       ctx.fillText(
         `${grade}`,
-        box.left + box.width / 2 - 25,
-        box.top + box.height / 2 - 20
+        box["left"] + box["width"] / 2 - 25,
+        box["top"] + box["height"] / 2 - 20
       );
       ctx.fillText(
         `${size}cm`,
-        box.leftft + box.width / 2 - 15,
-        box.top + box.height / 2 + 20
+        box["left"] + box["width"] / 2 - 15,
+        box["top"] + box["height"] / 2 + 20
       );
       ctx.lineWidth = "5";
       ctx.strokeStyle = "yellow";
-      ctx.strokeRect(box.left, box.top, box.width, box.height);
+      ctx.strokeRect(box["left"], box["top"], box["width"], box["height"]);
     },
 
-    finddistance(afters, boxes) {
+    caldistance(obj1, obj2) {
+      // obj1과 obj2의 거리를 구함
+      return Math.sqrt(
+        Math.pow(Math.abs(obj2["cx"] - obj1["cx"]), 2) +
+          Math.pow(Math.abs(obj2["cy"] - obj1["cy"]), 2)
+      );
+    },
+
+    finddistance(boxes) {
+      const afters = [];
       const befores = [];
       const dists = [];
-      const new_afters = [];
       const new_boxes = [];
       let dst = [];
 
+      boxes.forEach(box => {
+        afters.push({ cx: box["cx"], cy: box["cy"] });
+      });
+
       // tracker들의 각 마지막 위치를 구함
-      this.tracker.forEach(tracker => {
-        befores.push(tracker["last_pos"]);
+      Object.keys(this.tracker).forEach(key => {
+        const last = this.tracker[key]["last_pos"];
+        befores.push(last);
       });
 
       // 가장 가까운 거리를 구함
@@ -387,31 +400,36 @@ export default {
         });
         const idx = dst.indexOf(Math.min(...dst));
 
-        new_afters.push(afters[idx]);
         new_boxes.push(boxes[idx]);
         dists.push(dst[idx]);
         dst = [];
       });
 
       // 가장 가까운 거리들 다음 위치와 박스 그리고 거리를 반환
-      return [new_afters, new_boxes, dists];
+      return [new_boxes, dists];
     },
     updateposition(boxes) {
       if (boxes) {
-        const afters = [];
-
-        // boxes에서 cx, cy 값 반환
         boxes.forEach(box => {
-          const cx = box.left - box.width / 2;
-          const cy = box.top - box.height / 2;
-          afters.push({ cx: cx, cy: cy });
+          const cx = box["left"] + box["width"] / 2;
+          const cy = box["top"] + box["height"] / 2;
+          box["cx"] = cx;
+          box["cy"] = cy;
         });
 
         // 현재 trackers 내 거리와 새로운 boxes의 거리를 구함
-        const results = this.finddistance(afters, boxes);
-        const new_afters = results[0];
-        const new_boxes = results[1];
-        const new_dist = results[2];
+        const results = this.finddistance(boxes);
+        let new_boxes = results[0];
+        let new_dist = results[1];
+
+        function onlyUnique(value, index, self) {
+          return self.indexOf(value) === index;
+        }
+
+        new_boxes = new_boxes.filter(onlyUnique);
+        new_dist = new_dist.filter(onlyUnique);
+        new_dist = new_dist.filter(x => x < 150);
+        new_dist = new_dist.slice(0, new_boxes.length);
 
         // 거리가 가까운 순으로 정렬된 index 계산
         const len = new_dist.length;
@@ -436,11 +454,16 @@ export default {
         indices.forEach(id => {
           if (z < ppl.length && z < boxes.length) {
             if (!this.tracker[ppl[id]]["updated"]) {
+              const new_pos = {
+                cx: new_boxes[id]["cx"],
+                cy: new_boxes[id]["cy"]
+              };
+
+              this.tracker[ppl[id]]["last_pos"] = new_pos;
+              this.tracker[ppl[id]]["pos"][now] = new_pos;
+              this.tracker[ppl[id]]["box"] = new_boxes[id];
               this.tracker[ppl[id]]["dis"] = 0;
               this.tracker[ppl[id]]["come"] += 1;
-              this.tracker[ppl[id]]["last_pos"] = new_afters[id];
-              this.tracker[ppl[id]]["pos"][now] = new_afters[id];
-              this.tracker[ppl[id]]["box"] = new_boxes[id];
               this.tracker[ppl[id]]["updated"] = true;
 
               this.draw(
@@ -452,7 +475,9 @@ export default {
               );
               if (
                 this.tracker[ppl[id]]["grade"] == "선별중" &&
-                this.tracker[ppl[id]]["come"] > 5
+                this.tracker[ppl[id]]["come"] > 2 &&
+                this.yolomodel &&
+                this.mobilenet
               ) {
                 let results = this.classification(this.tracker[ppl[id]]["box"]);
                 this.tracker[ppl[id]]["grade"] = results[0];
@@ -464,22 +489,9 @@ export default {
         });
         this.removeTrackers();
 
-        function song(box) {
-          const cx = box.left - box.width / 2;
-          return !xs.includes(cx);
-        }
-
-        let xs = [];
-        new_boxes.forEach(el => xs.push(el.left - el.width / 2));
-        if (boxes.length > z) {
-          boxes.filter(song).forEach(box => {
-            console.log("등록");
-            const new_tracker = {};
-            const cx = box.left - box.width / 2;
-            const cy = box.top - box.height / 2;
-            new_tracker[now] = { cx: cx, cy: cy };
-            this.maketracker(new_tracker, box.class, box, now);
-          });
+        let difference = boxes.filter(box => !new_boxes.includes(box));
+        if (difference) {
+          difference.forEach(box => this.maketracker(box, now));
         }
       } else {
         this.removeTrackers();
@@ -500,7 +512,7 @@ export default {
   background: #dfe6e9;
 }
 
-.top {  
+.top {
   height: 5vh;
 }
 
@@ -555,7 +567,7 @@ export default {
   background-color: #fff;
 }
 
-.card {  
+.card {
   padding: 3px;
   margin-bottom: 5px;
   border-bottom: 2px solid black;
