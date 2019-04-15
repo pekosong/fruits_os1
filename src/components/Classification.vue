@@ -307,51 +307,11 @@ export default {
       this.mobilenet = null;
     },
 
-    maketracker(box, now) {
-      const newtracker = {
-        id: this.idx,
-        date: `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`,
-        hour: `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`,
-        last_pos: { cx: box["cx"], cy: box["cy"] },
-        pos: { now: { cx: box["cx"], cy: box["cy"] } },
-        cls: box["class"],
-        gone: false,
-        updated: false,
-        box: box,
-        grade: "선별중",
-        img: "",
-        size: parseInt(Math.min(box.width, box.height) / 20),
-        come: 0,
-        dis: 0
-      };
-      console.log("등록 완료");
-      this.tracker.push(newtracker);
-      this.idx += 1;
-      (this.show = false), (this.show = true);
-    },
-
-    removeTrackers() {
-      Object.keys(this.tracker).forEach(key => {
-        if (!this.tracker[key]["updated"]) {
-          this.tracker[key]["dis"] += 1;
-          if (this.tracker[key]["dis"] > 10) {
-            console.log("올드에 등록");
-            this.oldtracker.push(this.tracker[key]);
-            delete this.tracker[key];
-            console.log("제거");
-          }
-        }
-        if (this.tracker[key]) {
-          this.tracker[key]["updated"] = false;
-        }
-      });
-    },
-
     // Canvas의 Detecting된 과일에 Rectangle과 Label
-    draw(box, cls, id, grade, size) {
+    draw(box, cls, grade, size) {
       const ctx = this.$refs.canvas.getContext("2d");
       ctx.font = "30px sans-serif";
-      ctx.fillText(`id:${id}-${cls} `, box.left, box.top - 10);
+      ctx.fillText(`${cls} `, box.left, box.top - 10);
       ctx.font = "30px sans-serif";
       ctx.fillText(
         `${grade}`,
@@ -366,6 +326,53 @@ export default {
       ctx.lineWidth = "5";
       ctx.strokeStyle = "yellow";
       ctx.strokeRect(box["left"], box["top"], box["width"], box["height"]);
+    },
+
+    maketracker(box, now) {
+      const newtracker = {
+        id: this.idx,
+        date: `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`,
+        hour: `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`,
+        last_pos: { cx: box["cx"], cy: box["cy"] },
+        pos: { now: { cx: box["cx"], cy: box["cy"] } },
+        cls: box["class"],
+        gone: false,
+        updated: false,
+        box: box,
+        grade: "선별중",
+        img: "",
+        size: parseInt(Math.min(box.width, box.height) / 25),
+        come: 0,
+        dis: 0
+      };
+      console.log("등록 완료");
+      this.tracker.push(newtracker);
+      this.idx += 1;
+      (this.show = false), (this.show = true);
+    },
+
+    removeTrackers() {
+      Object.keys(this.tracker).forEach(key => {
+        if (!this.tracker[key]["updated"]) {
+          this.tracker[key]["dis"] += 1;
+        }
+        // 특정 지점에 있으면 Tracking 중지
+        // 객체 삭제 및 올드에 등록
+        if (
+          this.tracker[key]["dis"] > 10
+        ) {
+          console.log("올드에 등록");
+          if (this.tracker[key]["grade"] != "선별중") {
+            this.tracker[key]["cnt"] = this.cnt;
+            this.oldtracker.push(this.tracker[key]);
+            this.cnt += 1;
+          }
+          delete this.tracker[key];
+        }
+        if (this.tracker[key]) {
+          this.tracker[key]["updated"] = false;
+        }
+      });
     },
 
     caldistance(obj1, obj2) {
@@ -469,7 +476,6 @@ export default {
               this.draw(
                 this.tracker[ppl[id]]["box"],
                 this.tracker[ppl[id]]["cls"],
-                this.tracker[ppl[id]]["id"],
                 this.tracker[ppl[id]]["grade"],
                 this.tracker[ppl[id]]["size"]
               );
