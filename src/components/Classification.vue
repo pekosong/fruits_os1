@@ -68,7 +68,7 @@
                       <b-row class="text-center">
                         <b-col style="margin-top:20px" md="3">
                           <div>
-                            <h4>ID:{{item["id"]}}</h4>
+                            <h4>ID:{{item["cnt"]}}</h4>
                           </div>
                           <div>
                             <h4>{{item["grade"]}}</h4>
@@ -156,7 +156,8 @@ export default {
       tracker: [],
       oldtracker: [],
       idx: 1,
-      show: true
+      show: true,
+      cnt: 1
     };
   },
   mounted() {
