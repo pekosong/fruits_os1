@@ -1,25 +1,25 @@
 <template>
   <div id="sidebar">
-    <div class="title"  style="-webkit-app-region: drag">
-      <img src="../assets/logo.png" width="60%">
+    <div class="sidebar-title">
+      <img src="@/assets/logo.png" width="60%">
     </div>
-    <router-link class="tabs" to="/">
+    <router-link class="sidebar-tabs" to="/">
       <i class="icons fas fa-home"></i>
       <div class="menu">처음</div>
     </router-link>
-    <router-link class="tabs" to="/fruits">
+    <router-link class="sidebar-tabs" to="/items/fruits">
       <i class="icons fas fa-apple-alt"></i>
       <div class="menu">과일</div>
     </router-link>
-    <router-link class="tabs" to="/vegetables">
+    <router-link class="sidebar-tabs" to="/items/vegetables">
       <i class="icons fas fa-carrot"></i>
       <div class="menu">야채</div>
     </router-link>
-    <router-link class="tabs" to="/static">
+    <router-link class="sidebar-tabs" to="/static">
       <i class="icons fas fa-chart-pie"></i>
       <div class="menu">통계</div>
     </router-link>
-    <router-link class="tabs" to="/howto">
+    <router-link class="sidebar-tabs" to="/howto">
       <i class="icons fas fa-question-circle"></i>
       <div class="menu">사용법</div>
     </router-link>
@@ -46,13 +46,13 @@ export default {
   color: white;
 }
 
-.title {
+.sidebar-title {
   margin: 0;
   padding: 10px;
   text-align: center;
 }
 
-.tabs {
+.sidebar-tabs {
   display: block;
   text-decoration: none;
   padding: 8px;
@@ -60,11 +60,11 @@ export default {
   border-bottom: 0.5px solid white;
 }
 
-.tabs:hover {
+.sidebar-tabs:hover {
   background: #7f8c8d;
 }
 
-.tabs:focus {
+.sidebar-tabs:focus {
   background: #7f8c8d;
 }
 

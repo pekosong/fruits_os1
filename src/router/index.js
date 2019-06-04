@@ -11,14 +11,9 @@ export default new Router({
       component: require('@/components/Main').default
     },
     {
-      path: '/vegetables',
-      name: 'vegetables',
-      component: require('@/components/Vegetables').default
-    },
-    {
-      path: '/fruits',
-      name: 'fruits',
-      component: require('@/components/Fruits').default
+      path: '/items/:category',
+      name: 'category',
+      component: require('@/components/ClassMain').default
     },
     {
       path: '/static',

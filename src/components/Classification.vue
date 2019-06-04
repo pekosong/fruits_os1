@@ -1,20 +1,20 @@
 <template>
-  <div class="start">
-    <div class="wrapper">
+  <div class="class-item">
+    <div class="class-item-wrapper">
       <!-- Top -->
-      <div class="top">
+      <div class="class-item-top">
         <div>
-          <h1>{{status}} : {{selectedname}}</h1>
+          <h1>{{status}} : {{selectedName}}</h1>
         </div>
       </div>
       <!-- Top-end -->
 
       <!-- Main -->
-      <div class="main">
+      <div class="class-item-main">
         <!-- Left -->
-        <b-container class="left">
-          <b-row class="title">실시간 선별 영상 - Real Time</b-row>
-          <b-row class="left-video">
+        <b-container class="class-item-left">
+          <b-row class="class-item-title">실시간 선별 영상 - Real Time</b-row>
+          <b-row class="class-item-left-video">
             <video ref="video" id="video" width="1024px" height="768px" autoplay v-show="false"></video>
             <canvas ref="canvas" id="canvas" width="1024px" height="768px" v-show="true"></canvas>
             <canvas ref="canvas1" id="canvas1" width="1024px" height="768px" v-show="false"></canvas>
@@ -31,12 +31,12 @@
         <!-- Left-End -->
 
         <!-- Right -->
-        <div class="right">
+        <div class="class-item-right">
           <!-- Right-Top -->
 
-          <b-container class="right-top">
-            <b-row class="title">과일 선별 집계 현황</b-row>
-            <b-row class="text p-4">
+          <b-container class="class-item-right-top">
+            <b-row class="class-item-title">과일 선별 집계 현황</b-row>
+            <b-row class="class-item-text p-4">
               <b-col v-for="n in numbers" :key="n" v-show="show">
                 <b-button
                   size="lg"
@@ -50,15 +50,16 @@
           <!-- Right-Top-End -->
 
           <!-- Right-Bot -->
-          <b-container class="right-bot">
-            <b-row class="title">과일 선별 결과 누적</b-row>
-            <b-row class="text">
+          <b-container class="class-item-right-bot">
+            <b-row class="class-item-title">과일 선별 결과 누적</b-row>
+            <b-row class="class-item-text">
               <b-col v-show="show">
                 <b-card
                   v-for="(item, index) in oldtracker.slice().reverse().slice(0,5)"
                   :key="index"
                   no-body
-                  class="card"
+                  @click="showIndex(index)"
+                  class="class-item-card"
                 >
                   <b-row no-gutters class="p-1">
                     <b-col md="2">
@@ -77,7 +78,7 @@
                         <b-col md="3">
                           <div>흡집</div>
                           <img
-                            :src="selectedimg"
+                            :src="selectedImg"
                             :style="{filter:'grayscale(' + (100 - (100 / 1 * ((item['grade'] == 'A급') ? 1 : 0) )) + '%)'}"
                             style="width: 45px"
                           >
@@ -89,7 +90,7 @@
                         <b-col md="3">
                           <div>색깔</div>
                           <img
-                            :src="selectedimg"
+                            :src="selectedImg"
                             :style="{filter:'grayscale(' + (100 - (100 / 1 * 1)) + '%)'}"
                             style="width: 45px"
                           >
@@ -100,7 +101,7 @@
                         </b-col>
                         <b-col md="3">
                           <div>크기</div>
-                          <img :src="selectedimg" :width="'45px'">
+                          <img :src="selectedImg" :width="'45px'">
                           <div>
                             <b-button size="sm" variant="info">{{item['size']}}cm</b-button>
                           </div>
@@ -116,7 +117,7 @@
         </div>
         <!-- Right End -->
       </div>
-      <div class="bot center">
+      <div class="class-item-bot center">
         <div>
           <b-button size="lg" class="mr-2" variant="success" @click="detection">시작하기</b-button>
           <b-button size="lg" @click="backtohome">나가기</b-button>
@@ -133,7 +134,7 @@ import yolo from "tfjs-yolo";
 
 export default {
   name: "classification",
-  props: ["selectedimg", "numbers", "selectedname", "selectedename"],
+  props: ["selectedImg", "numbers", "selectedName", "selectedEname"],
   data() {
     return {
       status: "선별 중",
@@ -179,6 +180,9 @@ export default {
     }, 100);
   },
   methods: {
+    showIndex(idx) {
+      console.log(idx)
+    },
     async loadyolomodel() {
       this.yolomodel = await yolo.v3tiny(
         "https://raw.githubusercontent.com/pekosong/models/master/three/model.json"
@@ -187,12 +191,12 @@ export default {
     },
     async loadmobilenet() {
       const modelname = `https://raw.githubusercontent.com/pekosong/models/master/${
-        this.selectedename
+        this.selectedEname
       }${this.numbers}/model.json`;
       console.log(modelname, "로딩시작");
       this.mobilenet = await tf.loadLayersModel(modelname, false);
       this.mobilenet.predict(tf.zeros([1, 224, 224, 3])).dispose();
-      console.log(this.selectedename, "model 로딩완료");
+      console.log(this.selectedEname, "model 로딩완료");
     },
 
     // Loop 시작
@@ -223,18 +227,18 @@ export default {
       boxes.forEach(el => classes.push(el.class));
 
       // Detecting
-      if (this.selectedename == "fruits") {
+      if (this.selectedEname == "fruits") {
         this.status = "분류 중";
         this.updateposition(boxes);
-      } else if (classes.includes(this.selectedename)) {
+      } else if (classes.includes(this.selectedEname)) {
         this.status = "선별 중";
         let filteredboxses = boxes.filter(
-          box => box.class == this.selectedename
+          box => box.class == this.selectedEname
         );
         this.updateposition(filteredboxses);
       } else {
         this.updateposition();
-        this.status = `${this.selectedname} 감지 안 됨`;
+        this.status = `${this.selectedEname} 감지 안 됨`;
       }
     },
     makecanvas() {
@@ -509,7 +513,7 @@ export default {
 </script>
 
 <style scoped>
-.start {
+.class-item {
   position: fixed;
   margin: 0 0 0 10vw;
   width: 90vw;
@@ -519,69 +523,69 @@ export default {
   background: #dfe6e9;
 }
 
-.top {
+.class-item-top {
   height: 5vh;
 }
 
-.main {
+.class-item-main {
   display: flex;
 }
 
-.wrapper {
+.class-item-wrapper {
   margin: 10px;
 }
 
-.left {
+.class-item-left {
   width: 63%;
   height: 85vh;
   background-color: #fff;
   border-radius: 3px;
 }
 
-.left-video {
+.class-item-left-video {
   padding: 20px;
   padding-top: 45px;
 }
 
-.right {
+.class-item-right {
   width: 37%;
   height: 85vh;
   margin-left: 15px;
 }
 
-.right-top {
+.class-item-right-top {
   height: 20%;
   border-radius: 3px;
 }
 
-.right-bot {
+.class-item-right-bot {
   height: 80%;
   width: 100%;
   border-radius: 3px;
   background-color: #fff;
 }
 
-.title {
+.class-item-title {
   background-color: #303952;
   color: white;
   padding: 10px;
   font-size: 1.3rem;
 }
 
-.text {
+.class-item-text {
   color: black;
   padding: 15px 0px;
   background-color: #fff;
 }
 
-.card {
+.class-item-card {
   padding: 3px;
   margin-bottom: 5px;
   border-bottom: 2px solid black;
   border-right: 2px solid black;
 }
 
-.bot {
+.class-item-bot {
   padding: 20px;
   display: flex;
   justify-content: center;

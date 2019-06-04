@@ -6,7 +6,7 @@
 </template>
 
 <script>
-  import Sidebar from './components/Sidebar'
+  import Sidebar from '@/components/Sidebar'
   export default {
     name: 'my-project',
     components: { Sidebar }
@@ -26,6 +26,9 @@
 
   body {
     border-radius: 25px;
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
   }
 
   .content {
@@ -44,13 +47,13 @@
     flex-direction: column;
   }
   
-  #style-3::-webkit-scrollbar
+  #style-scroll::-webkit-scrollbar
   {
     width: 2px;
     background-color: #F5F5F5;
   }
 
-  #style-3::-webkit-scrollbar-thumb
+  #style-scroll::-webkit-scrollbar-thumb
   {
     background-color: #ffeaa7;
   }
