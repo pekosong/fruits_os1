@@ -1,79 +1,89 @@
 <template>
-  <div id="ClassMain" class="content">
+  <div id="ClassMain">
     <!-- 과일 종류 선택 -->
-    <div id="style-scroll" class="class-left">
-      <div v-for="item in items[$route.params.category]" :key="item.id">
-        <div class="class-item" @click="select(item)">
-          <img class="class-item-image" :src="item.img">
-          <span class="class-item-font">{{ item.name }}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- 과일 종류 선택 -->
-    <div v-if="selected" class="class-right">
-      <div class="center">
-        <h2>선별을 원하는 {{ selectedCategory[$route.params.category] }} 선택 해주세요</h2>
-      </div>
-    </div>
-
-    <!-- 과일 등급 선택 -->
-    <div v-else class="class-right">
-      <div class="center">
-        <div>
-          <img :src="selectedImg" style="width: 350px;">
-          <div>
-            <h1>{{ selectedName }}</h1>
+    <div v-if="!start" class="content">
+      <div id="style-scroll" class="class-left">
+        <div v-for="item in items[$route.params.category]" :key="item.id">
+          <div class="class-item" @click="select(item)">
+            <img class="class-item-image" :src="item.img">
+            <br>
+            <span class="class-item-font">{{ item.name }}</span>
           </div>
         </div>
+      </div>
 
-        <!-- 과일 등급 선택 : 2~3개 등급 -->
-        <b-form-group label="등급 선별 기준 선택">
-          <b-form-checkbox-group
-            v-model="selectedValue"
-            :options="options"
-            name="flavour-1a"
-          ></b-form-checkbox-group>
-        </b-form-group>
-        <div class="class-options">
-          흠 / 멍 기준 :
-          <input type="radio" id="two" value="2" v-model="picked">
-          <label for="two">소</label>
-          <input type="radio" id="three" value="3" v-model="picked">
-          <label for="three">중</label>
-          <input type="radio" id="four" value="4" v-model="picked">
-          <label for="four">대</label>
-          <br>
-          색깔 기준 :
-          <input type="radio" id="two" value="2" v-model="picked">
-          <label for="two">소</label>
-          <input type="radio" id="three" value="3" v-model="picked">
-          <label for="three">중</label>
-          <input type="radio" id="four" value="4" v-model="picked">
-          <label for="four">대</label>
-          <br>
-          크기 기준 :
-          <input type="radio" id="two" value="2" v-model="picked">
-          <label for="two">7cm</label>
-          <input type="radio" id="three" value="3" v-model="picked">
-          <label for="three">8cm</label>
-          <input type="radio" id="four" value="4" v-model="picked">
-          <label for="four">9cm</label>
-          <br>
+      <!-- 과일 종류 선택 -->
+      <div v-if="selected" class="class-right">
+        <div class="center">
+          <h2>선별을 원하는 {{ selectedCategory[$route.params.category] }} 선택 해주세요</h2>
+        </div>
+      </div>
+
+      <!-- 과일 등급 선택 -->
+      <div v-else class="class-right">
+        <div class="center">
+          <div>
+            <img :src="selectedImg" style="width: 250px;">
+            <div>
+              <h1>{{ selectedName }} : {{ grade }}개 등급</h1>
+              <b-form-group>
+                <b-form-radio-group v-model="grade" :options="gradeOption" name="radio-inline"></b-form-radio-group>
+              </b-form-group>
+            </div>
+          </div>
+
+          <!-- 과일 등급 선택 : 2~3개 등급 -->
+          <div class="d-flex">
+            <div v-for="n in grade" :key="n" class="class-options" style="font-size:1.2rem">
+              <div style="margin-bottom:20px">
+                <h2>{{ n }}등급</h2>
+              </div>
+              <b-form-group label="흠집 / 멍">
+                <b-form-radio-group
+                  v-model="selectedMatrix[grade][n].defect"
+                  :options="options.option1"
+                  buttons
+                  button-variant="outline-primary"
+                  size="md"
+                  name="radio-btn-outline"
+                ></b-form-radio-group>
+              </b-form-group>
+              <b-form-group label="착색">
+                <b-form-radio-group
+                  v-model="selectedMatrix[grade][n].color"
+                  :options="options.option2"
+                  buttons
+                  button-variant="outline-primary"
+                  size="md"
+                  name="radio-btn-outline"
+                ></b-form-radio-group>
+              </b-form-group>
+              <b-form-group label="크기">
+                <b-form-radio-group
+                  v-model="selectedMatrix[grade][n].size"
+                  :options="options.option3"
+                  buttons
+                  button-variant="outline-primary"
+                  size="md"
+                  name="radio-btn-outline"
+                ></b-form-radio-group>
+              </b-form-group>
+            </div>
+          </div>
           <div>
             <b-button size="lg" class="mr-2" variant="success" @click="startClass">시작하기</b-button>
           </div>
         </div>
       </div>
     </div>
-
+    <!-- 과일 분류 화면 -->
     <classification
-      v-if="start"
+      v-else
       :selectedImg="selectedImg"
       :selectedName="selectedName"
       :selectedEname="selectedEname"
-      :numbers="numbers"
-      :mobilenet="mobilenet"
+      :selectedMatrix="selectedMatrix[grade]"
+      :grade="grade"
       @backto-home="reset"
     ></classification>
   </div>
@@ -87,20 +97,68 @@ export default {
   components: { Classification },
   data() {
     return {
-      options: [
-        { text: '흠/멍', value: 'orange' },
-        { text: '크기', value: 'apple' },
-        { text: '색깔', value: 'pineapple' },
+      grade: 2,
+      gradeOption: [
+        { text: "2개", value: 2 },
+        { text: "3개", value: 3 },
+        { text: "4개", value: 4 }
       ],
-      value:0,
+      options: {
+        option1: [{ text: "무", value: 0 }, { text: "유", value: 1 }],
+        option2: [
+          { text: "상", value: 1 },
+          { text: "중", value: 2 },
+          { text: "하", value: 3 }
+        ],
+        option3: [
+          { text: "9cm", value: 9 },
+          { text: "8cm", value: 8 },
+          { text: "7cm", value: 7 }
+        ]
+      },
+      value: 0,
       selectedValue: [],
       selected: true,
+      selectedMatrix: {
+        2 : {
+          1: {
+            defect: 0, color : 1, size : 9
+          },
+          2: {
+            defect: 1, color : 2, size : 8
+          }
+        },
+        3 : {
+          1: {
+            defect: 0, color : 1, size : 9
+          },
+          2: {
+            defect: 0, color : 2, size : 8
+          },
+          3: {
+            defect: 1, color : 2, size : 7
+          }
+        },
+        4 : {
+          1: {
+            defect: 0, color : 1, size : 9
+          },
+          2: {
+            defect: 0, color : 2, size : 8
+          },
+          3: {
+            defect: 1, color : 2, size : 7
+          },
+          4: {
+            defect: 1, color : 3, size : 7
+          }
+        }
+      },
       selectedImg: null,
       selectedName: null,
       selectedEname: null,
       picked: "",
       start: false,
-      mobilenet: undefined,
       selectedCategory: {
         fruits: "과일",
         vegetables: "야채"
@@ -108,10 +166,7 @@ export default {
     };
   },
   computed: {
-    ...mapState(["items"]),
-    numbers: function() {
-      return Number(this.picked);
-    }
+    ...mapState(["items"])
   },
   methods: {
     select(item) {
@@ -127,7 +182,7 @@ export default {
       console.log("model 제거 완료");
       this.start = !this.start;
     },
-    async startClass() {
+    startClass() {
       this.start = !this.start;
     }
   }
@@ -157,9 +212,9 @@ label {
 }
 
 .class-options {
-  margin-top: 20px;
-  padding: 20px 0;
-  border-top: 0.5px solid grey;
+  margin: 10px;
+  padding: 15px;
+  border: 1px solid grey;
 }
 
 .class-item {
@@ -177,5 +232,10 @@ label {
 
 .class-item-font {
   font-size: 1.5rem;
+}
+
+.btn .btn-outline-primary .btn-md {
+  width: 100px !important;
+  padding: 20px !important;
 }
 </style>

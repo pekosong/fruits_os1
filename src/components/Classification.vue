@@ -36,14 +36,12 @@
 
           <b-container class="class-item-right-top">
             <b-row class="class-item-title">과일 선별 집계 현황</b-row>
-            <b-row class="class-item-text p-4">
-              <b-col v-for="n in numbers" :key="n" v-show="show">
-                <b-button
-                  size="lg"
-                  block
-                  variant="warning"
-                >{{ classes[numbers][n-1] }} - {{ count[numbers][n-1]}} 개</b-button>
-              </b-col>
+            <b-row v-for="n in grade" :key="n" v-show="show" class="class-item-text p-2 border">
+              <b-col class="col-2" style="color:red;font-size:1.3rem">{{ n }} 등급 </b-col>
+              <b-col class="col-2">흠: {{ defect[selectedMatrix[n].defect] }}</b-col>
+              <b-col class="col-2">착색: {{ color[selectedMatrix[n].color] }}</b-col>
+              <b-col class="col-4">크기: {{ selectedMatrix[n].size }}cm 이상</b-col>
+              <b-col class="col-2" style="color:blue;font-size:1.3rem">{{ count[grade][n-1] }} 개</b-col>
             </b-row>
           </b-container>
 
@@ -79,16 +77,16 @@
                           <div>흡집</div>
                           <img
                             :src="selectedImg"
-                            :style="{filter:'grayscale(' + (100 - (100 / 1 * ((item['grade'] == 'A급') ? 1 : 0) )) + '%)'}"
+                            :style="{filter:'grayscale(' + (100 - (100 / 1 * ((item['grade'] == '유') ? 1 : 0) )) + '%)'}"
                             style="width: 45px"
                           >
                           <div>
-                            <b-button size="sm" v-if="item['grade'] == 'A급'" variant="info">정상</b-button>
+                            <b-button size="sm" v-if="item['grade'] == '유'" variant="info">정상</b-button>
                             <b-button size="sm" v-else variant="danger">비정상</b-button>
                           </div>
                         </b-col>
                         <b-col md="3">
-                          <div>색깔</div>
+                          <div>착색</div>
                           <img
                             :src="selectedImg"
                             :style="{filter:'grayscale(' + (100 - (100 / 1 * 1)) + '%)'}"
@@ -134,21 +132,25 @@ import yolo from "tfjs-yolo";
 
 export default {
   name: "classification",
-  props: ["selectedImg", "numbers", "selectedName", "selectedEname"],
+  props: [
+    "selectedImg",
+    "selectedName",
+    "selectedEname",
+    "selectedMatrix",
+    "grade"
+  ],
   data() {
     return {
+      defect: { 0: "무", 1: "유" },
+      color: { 1: "상", 2: "중", 3: "하" },
       status: "선별 중",
       mobilenet: undefined,
       yolomodel: undefined,
-      classes: {
-        2: ["A급", "B급"],
-        3: ["A급", "B급", "C급"],
-        4: ["A급", "B급", "C급", "D급"]
-      },
+      classes: ["유", "무"],
       count: {
-        2: [0, 0],
-        3: [0, 0, 0],
-        4: [0, 0, 0, 0]
+        2:[0, 0],
+        3:[0, 0, 0],
+        4:[0, 0, 0, 0]
       },
       result: "",
       show: true,
@@ -158,7 +160,8 @@ export default {
       oldtracker: [],
       idx: 1,
       show: true,
-      cnt: 1
+      cnt: 1,
+      numbers: 2
     };
   },
   mounted() {
@@ -179,9 +182,9 @@ export default {
       this.play();
     }, 100);
   },
-  methods: {
+  methods: {    
     showIndex(idx) {
-      console.log(idx)
+      console.log(idx);
     },
     async loadyolomodel() {
       this.yolomodel = await yolo.v3tiny(
@@ -192,7 +195,7 @@ export default {
     async loadmobilenet() {
       const modelname = `https://raw.githubusercontent.com/pekosong/models/master/${
         this.selectedEname
-      }${this.numbers}/model.json`;
+      }2/model.json`;
       console.log(modelname, "로딩시작");
       this.mobilenet = await tf.loadLayersModel(modelname, false);
       this.mobilenet.predict(tf.zeros([1, 224, 224, 3])).dispose();
@@ -201,12 +204,14 @@ export default {
 
     // Loop 시작
     play() {
-      this.$refs.canvas1
-        .getContext("2d")
-        .drawImage(this.$refs.video, 0, 0, this.width, this.height);
-      if (this.yolomodel && this.mobilenet) {
-        this.detection();
-      }
+      try {
+        this.$refs.canvas1
+          .getContext("2d")
+          .drawImage(this.$refs.video, 0, 0, this.width, this.height);
+        if (this.yolomodel && this.mobilenet) {
+          this.detection();
+        }
+      } catch {}
     },
 
     // 과일 Detecting
@@ -242,9 +247,11 @@ export default {
       }
     },
     makecanvas() {
-      this.$refs.canvas
-        .getContext("2d")
-        .drawImage(this.$refs.canvas1, 0, 0, 1024, 768);
+      try {
+        this.$refs.canvas
+          .getContext("2d")
+          .drawImage(this.$refs.canvas1, 0, 0, 1024, 768);
+      } catch {}
     },
 
     // Canvas2에 Detecting된 과일 분류
@@ -269,25 +276,48 @@ export default {
         const predictions = this.mobilenet.predict(inputImage);
 
         const results = Array.from(predictions.dataSync());
-        const result = this.classes[this.numbers][
-          results.indexOf(Math.max(...results))
-        ];
-        if (this.numbers == 2) {
-          if (result === "A급") {
-            this.count[this.numbers][0] += 1;
+        const fault = this.classes[results.indexOf(Math.max(...results))];
+        const size = 9
+        const color = 2
+
+        let result = ""
+        
+        if (this.grade == 2) {
+          if (fault == this.selectedMatrix[1].defect && size >= this.selectedMatrix[1].size && color == this.selectedMatrix[1].color) {
+            this.count[this.grade][0] += 1;
+            result = "1급"
           } else {
-            this.count[this.numbers][1] += 1;
+            this.count[this.grade][1] += 1;
+            result = "2급"
           }
-        } else if (this.numbers == 3) {
-          if (result === "A급") {
-            this.count[this.numbers][0] += 1;
-          } else if (this.result === "B급") {
-            this.count[this.numbers][1] += 1;
+        } else if (this.grade == 3) {
+          if (fault == this.selectedMatrix[1].defect && size >= this.selectedMatrix[1].size && color == this.selectedMatrix[1].color) {
+            this.count[this.grade][0] += 1;
+            result = "1급"
+          } else if (fault == this.selectedMatrix[2].defect && size >= this.selectedMatrix[2].size && color == this.selectedMatrix[2].color) {
+            this.count[this.grade][1] += 1;
+            result = "2급"
           } else {
-            this.count[this.numbers][2] += 1;
+            this.count[this.grade][2] += 1;
+            result = "3급"
+          }
+        } else {
+          if (fault == this.selectedMatrix[1].defect && size >= this.selectedMatrix[1].size && color == this.selectedMatrix[1].color) {
+            this.count[this.grade][0] += 1;
+            result = "1급"
+          } else if (fault == this.selectedMatrix[2].defect && size >= this.selectedMatrix[2].size && color == this.selectedMatrix[2].color) {
+            this.count[this.grade][1] += 1;
+            result = "2급"
+          } else if (fault == this.selectedMatrix[2].defect && size >= this.selectedMatrix[2].size && color == this.selectedMatrix[2].color) {
+            this.count[this.grade][2] += 1;
+            result = "3급"
+          } else {
+            this.count[this.grade][3] += 1;
+            result = "4급"
           }
         }
-        return [result, img];
+
+        return [fault, img];
       } catch (err) {
         console.log(err);
       }
@@ -363,12 +393,11 @@ export default {
         }
         // 특정 지점에 있으면 Tracking 중지
         // 객체 삭제 및 올드에 등록
-        if (
-          this.tracker[key]["dis"] > 10
-        ) {
+        if (this.tracker[key]["dis"] > 10) {
           console.log("올드에 등록");
           if (this.tracker[key]["grade"] != "선별중") {
             this.tracker[key]["cnt"] = this.cnt;
+            console.log(this.tracker[key]);
             this.oldtracker.push(this.tracker[key]);
             this.cnt += 1;
           }
@@ -537,14 +566,13 @@ export default {
 
 .class-item-left {
   width: 63%;
-  height: 85vh;
+  max-height: 900px;
   background-color: #fff;
   border-radius: 3px;
 }
 
 .class-item-left-video {
-  padding: 20px;
-  padding-top: 45px;
+  padding: 50px;
 }
 
 .class-item-right {
@@ -554,12 +582,12 @@ export default {
 }
 
 .class-item-right-top {
-  height: 20%;
   border-radius: 3px;
+  margin-bottom: 10px;
 }
 
 .class-item-right-bot {
-  height: 80%;
+  min-height: 75%;
   width: 100%;
   border-radius: 3px;
   background-color: #fff;
@@ -574,7 +602,7 @@ export default {
 
 .class-item-text {
   color: black;
-  padding: 15px 0px;
+  font-size: 1.2rem;
   background-color: #fff;
 }
 
