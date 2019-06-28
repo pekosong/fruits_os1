@@ -1,7 +1,7 @@
 <template>
   <div id="sidebar">
     <div class="sidebar-title">
-      <img src="@/assets/logo.png" width="60%">
+      <img src="@/assets/images/logo.png" width="60%">
     </div>
     <router-link class="sidebar-tabs" to="/">
       <i class="icons fas fa-home"></i>

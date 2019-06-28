@@ -31,7 +31,7 @@ h1 {
 
 .main-right {
   width: 50vw;
-  background: url("https://images.unsplash.com/photo-1452804882841-573355623310?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1350&q=80");
+  background: url("~@/assets/images/photo-1452804882841-573355623310.jpg");
   background-repeat: no-repeat;
   background-size: cover;
 }

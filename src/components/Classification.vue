@@ -127,7 +127,7 @@
 
 <script>
 import * as tf from "@tensorflow/tfjs";
-import { setInterval, setTimeout } from "timers";
+import { setInterval } from "timers";
 import yolo from "tfjs-yolo";
 
 export default {
@@ -137,7 +137,7 @@ export default {
     "selectedName",
     "selectedEname",
     "selectedMatrix",
-    "grade"
+    "grade",
   ],
   data() {
     return {
@@ -153,7 +153,6 @@ export default {
         4:[0, 0, 0, 0]
       },
       result: "",
-      show: true,
       width: 1024,
       height: 768,
       tracker: [],
@@ -187,15 +186,16 @@ export default {
       console.log(idx);
     },
     async loadyolomodel() {
+      // this.yolomodel = await yolo.v3tiny(
+      //   `https://raw.githubusercontent.com/pekosong/models/master/${this.$route.params.category}/model.json`
+      // );
       this.yolomodel = await yolo.v3tiny(
-        "https://raw.githubusercontent.com/pekosong/models/master/three/model.json"
+        `http://localhost:5000/api/${this.$route.params.category}/model.json`
       );
       console.log("yolo model 로딩 완료");
     },
-    async loadmobilenet() {
-      const modelname = `https://raw.githubusercontent.com/pekosong/models/master/${
-        this.selectedEname
-      }2/model.json`;
+    async loadmobilenet() {      
+      const modelname = `http://localhost:5000/api/${this.selectedEname}2/model.json`;
       console.log(modelname, "로딩시작");
       this.mobilenet = await tf.loadLayersModel(modelname, false);
       this.mobilenet.predict(tf.zeros([1, 224, 224, 3])).dispose();
@@ -211,7 +211,9 @@ export default {
         if (this.yolomodel && this.mobilenet) {
           this.detection();
         }
-      } catch {}
+      } catch { err => {
+        console.log(err);
+      }}
     },
 
     // 과일 Detecting
@@ -220,9 +222,9 @@ export default {
         maxBoxes: 5,
         scoreThreshold: 0.2,
         iouThreshold: 0.5,
-        numClasses: 3,
+        numClasses: 4,
         anchors: [10, 14, 23, 27, 37, 58, 81, 82, 135, 169, 344, 319],
-        classNames: ["orange", "apple", "tomato"],
+        classNames: ["apple", "tomato", "pear", "orange"],
         inputSize: 416
       });
 
@@ -251,9 +253,10 @@ export default {
         this.$refs.canvas
           .getContext("2d")
           .drawImage(this.$refs.canvas1, 0, 0, 1024, 768);
-      } catch {}
+      } catch { err => {
+        console.log(err)
+      }}
     },
-
     // Canvas2에 Detecting된 과일 분류
     classification(box) {
       try {
@@ -270,16 +273,28 @@ export default {
             300,
             300
           );
-        const img = this.$refs.cropfruits.toDataURL("image/png");
+        const img = this.$refs.cropfruits.toDataURL("image/png");        
 
         const inputImage = this.preProcess(this.$refs.cropfruits);
         const predictions = this.mobilenet.predict(inputImage);
+
+        let size1 = 0
+
+        // Axios Post request
+        size1 = this.axios
+        .post(`http://localhost:5000/`, {
+          name: 'song',
+          img: img
+        })
+        .then((result) => {
+          return result.data
+        })
 
         const results = Array.from(predictions.dataSync());
         const fault = this.classes[results.indexOf(Math.max(...results))];
         const size = 9
         const color = 2
-
+        
         let result = ""
         
         if (this.grade == 2) {
@@ -317,7 +332,7 @@ export default {
           }
         }
 
-        return [fault, img];
+        return [fault, img, size1];
       } catch (err) {
         console.log(err);
       }
@@ -345,19 +360,22 @@ export default {
     // Canvas의 Detecting된 과일에 Rectangle과 Label
     draw(box, cls, grade, size) {
       const ctx = this.$refs.canvas.getContext("2d");
-      ctx.font = "30px sans-serif";
+      ctx.font = "36px sans-serif";
+      ctx.fillStyle = "#FFA500";
       ctx.fillText(`${cls} `, box.left, box.top - 10);
       ctx.font = "30px sans-serif";
+      ctx.fillStyle = "#3498db";
       ctx.fillText(
         `${grade}`,
         box["left"] + box["width"] / 2 - 25,
         box["top"] + box["height"] / 2 - 20
       );
+      ctx.fillStyle = "#2ecc71";
       ctx.fillText(
         `${size}cm`,
         box["left"] + box["width"] / 2 - 15,
         box["top"] + box["height"] / 2 + 20
-      );
+      );      
       ctx.lineWidth = "5";
       ctx.strokeStyle = "yellow";
       ctx.strokeRect(box["left"], box["top"], box["width"], box["height"]);
@@ -376,7 +394,8 @@ export default {
         box: box,
         grade: "선별중",
         img: "",
-        size: parseInt(Math.min(box.width, box.height) / 25),
+        // size: parseInt(Math.min(box.width, box.height) / 25),
+        size: "",
         come: 0,
         dis: 0
       };
@@ -397,7 +416,7 @@ export default {
           console.log("올드에 등록");
           if (this.tracker[key]["grade"] != "선별중") {
             this.tracker[key]["cnt"] = this.cnt;
-            console.log(this.tracker[key]);
+            // console.log(this.tracker[key]);
             this.oldtracker.push(this.tracker[key]);
             this.cnt += 1;
           }
@@ -449,6 +468,9 @@ export default {
       // 가장 가까운 거리들 다음 위치와 박스 그리고 거리를 반환
       return [new_boxes, dists];
     },
+    onlyUnique(value, index, self) {
+      return self.indexOf(value) === index;
+    },
     updateposition(boxes) {
       if (boxes) {
         boxes.forEach(box => {
@@ -463,12 +485,12 @@ export default {
         let new_boxes = results[0];
         let new_dist = results[1];
 
-        function onlyUnique(value, index, self) {
-          return self.indexOf(value) === index;
-        }
+        // function onlyUnique(value, index, self) {
+        //   return self.indexOf(value) === index;
+        // }
 
-        new_boxes = new_boxes.filter(onlyUnique);
-        new_dist = new_dist.filter(onlyUnique);
+        new_boxes = new_boxes.filter(this.onlyUnique);
+        new_dist = new_dist.filter(this.onlyUnique);
         new_dist = new_dist.filter(x => x < 150);
         new_dist = new_dist.slice(0, new_boxes.length);
 
@@ -522,6 +544,11 @@ export default {
                 let results = this.classification(this.tracker[ppl[id]]["box"]);
                 this.tracker[ppl[id]]["grade"] = results[0];
                 this.tracker[ppl[id]]["img"] = results[1];
+
+                Promise.resolve(results[2]).then(value => {
+                  this.tracker[ppl[id]]["size"] = value
+                })
+                // this.tracker[ppl[id]]["size"] = res;
               }
               z += 1;
             }
@@ -561,18 +588,18 @@ export default {
 }
 
 .class-item-wrapper {
-  margin: 10px;
+  margin: 20px;
 }
 
 .class-item-left {
   width: 63%;
-  max-height: 900px;
+  max-height: 850px;
   background-color: #fff;
   border-radius: 3px;
 }
 
 .class-item-left-video {
-  padding: 50px;
+  padding: 15px;
 }
 
 .class-item-right {

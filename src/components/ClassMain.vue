@@ -1,25 +1,25 @@
 <template>
   <div id="ClassMain">
-    <!-- 과일 종류 선택 -->
+    <!-- 종류 선택 -->
     <div v-if="!start" class="content">
       <div id="style-scroll" class="class-left">
         <div v-for="item in items[$route.params.category]" :key="item.id">
           <div class="class-item" @click="select(item)">
-            <img class="class-item-image" :src="item.img">
+            <img class="class-item-image" :src="item['img']">
             <br>
             <span class="class-item-font">{{ item.name }}</span>
           </div>
         </div>
       </div>
 
-      <!-- 과일 종류 선택 -->
+      <!-- 종류 선택 -->
       <div v-if="selected" class="class-right">
         <div class="center">
           <h2>선별을 원하는 {{ selectedCategory[$route.params.category] }} 선택 해주세요</h2>
         </div>
       </div>
 
-      <!-- 과일 등급 선택 -->
+      <!-- 등급 선택 -->
       <div v-else class="class-right">
         <div class="center">
           <div>
@@ -32,7 +32,7 @@
             </div>
           </div>
 
-          <!-- 과일 등급 선택 : 2~3개 등급 -->
+          <!-- 등급 선택 : 2~3개 등급 -->
           <div class="d-flex">
             <div v-for="n in grade" :key="n" class="class-options" style="font-size:1.2rem">
               <div style="margin-bottom:20px">
@@ -76,7 +76,7 @@
         </div>
       </div>
     </div>
-    <!-- 과일 분류 화면 -->
+    <!-- 분류 화면 -->
     <classification
       v-else
       :selectedImg="selectedImg"

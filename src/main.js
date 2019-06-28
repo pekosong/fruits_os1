@@ -7,6 +7,8 @@ import BootstrapVue from 'bootstrap-vue'
 import 'bootstrap/dist/css/bootstrap.css'
 import 'bootstrap-vue/dist/bootstrap-vue.css'
 import Trend from 'vuetrend';
+import axios from 'axios'
+import VueAxios from 'vue-axios'
 import {
   Laue
 } from 'laue';
@@ -15,6 +17,7 @@ import VueGoogleCharts from 'vue-google-charts'
 Vue.use(VueGoogleCharts)
 Vue.config.productionTip = false
 Vue.use(BootstrapVue)
+Vue.use(VueAxios, axios)
 Vue.use(Trend)
 Vue.use(Laue)
 
