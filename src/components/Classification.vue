@@ -117,8 +117,8 @@
       </div>
       <div class="class-item-bot center">
         <div>
-          <b-button size="lg" class="mr-2" variant="success" @click="detection">시작하기</b-button>
-          <b-button size="lg" @click="backtohome">나가기</b-button>
+          <b-button size="lg" class="mr-2" variant="success" @click="detectObj">시작하기</b-button>
+          <b-button size="lg" @click="backToHome">나가기</b-button>
         </div>
       </div>
     </div>
@@ -175,8 +175,8 @@ export default {
           console.log(err);
         });
     }
-    this.loadyolomodel();
-    this.loadmobilenet();
+    this.loadYolomodel();
+    this.loadMobilenet();
     setInterval(() => {
       this.play();
     }, 100);
@@ -185,16 +185,13 @@ export default {
     showIndex(idx) {
       console.log(idx);
     },
-    async loadyolomodel() {
-      // this.yolomodel = await yolo.v3tiny(
-      //   `https://raw.githubusercontent.com/pekosong/models/master/${this.$route.params.category}/model.json`
-      // );
-      this.yolomodel = await yolo.v3tiny(
-        `http://localhost:5000/api/${this.$route.params.category}/model.json`
-      );
+
+    // Yolo V3 Model + Classification Model Loading
+    async loadYolomodel() {
+      this.yolomodel = await yolo.v3tiny(`http://localhost:5000/api/${this.$route.params.category}/model.json`);
       console.log("yolo model 로딩 완료");
     },
-    async loadmobilenet() {      
+    async loadMobilenet() {      
       const modelname = `http://localhost:5000/api/${this.selectedEname}2/model.json`;
       console.log(modelname, "로딩시작");
       this.mobilenet = await tf.loadLayersModel(modelname, false);
@@ -209,15 +206,15 @@ export default {
           .getContext("2d")
           .drawImage(this.$refs.video, 0, 0, this.width, this.height);
         if (this.yolomodel && this.mobilenet) {
-          this.detection();
+          this.detectObj();
         }
       } catch { err => {
         console.log(err);
       }}
     },
 
-    // 과일 Detecting
-    async detection() {
+    // Yolo Model로 과일 / 야채 Detecting
+    async detectObj() {
       const boxes = await this.yolomodel.predict(this.$refs.canvas1, {
         maxBoxes: 5,
         scoreThreshold: 0.2,
@@ -229,26 +226,28 @@ export default {
       });
 
       let classes = [];
-      this.makecanvas();
+      this.makeCanvas();
 
       boxes.forEach(el => classes.push(el.class));
 
-      // Detecting
+      // 과일 / 야채가 Detected되면 Position Update
       if (this.selectedEname == "fruits") {
         this.status = "분류 중";
-        this.updateposition(boxes);
+        this.updatePosition(boxes);
       } else if (classes.includes(this.selectedEname)) {
         this.status = "선별 중";
         let filteredboxses = boxes.filter(
           box => box.class == this.selectedEname
         );
-        this.updateposition(filteredboxses);
+        this.updatePosition(filteredboxses);
       } else {
-        this.updateposition();
+        this.updatePosition();
         this.status = `${this.selectedEname} 감지 안 됨`;
       }
     },
-    makecanvas() {
+
+    // 화면 출력 
+    makeCanvas() {
       try {
         this.$refs.canvas
           .getContext("2d")
@@ -257,7 +256,8 @@ export default {
         console.log(err)
       }}
     },
-    // Canvas2에 Detecting된 과일 분류
+
+    // Canvas2에 Detected된 과일 / 야채 분류
     classification(box) {
       try {
         this.$refs.cropfruits
@@ -274,7 +274,6 @@ export default {
             300
           );
         const img = this.$refs.cropfruits.toDataURL("image/png");        
-
         const inputImage = this.preProcess(this.$refs.cropfruits);
         const predictions = this.mobilenet.predict(inputImage);
 
@@ -332,6 +331,7 @@ export default {
           }
         }
 
+        // 분류 결과, 이미지, 크기 
         return [fault, img, size1];
       } catch (err) {
         console.log(err);
@@ -340,6 +340,7 @@ export default {
       this.show = true;
     },
 
+    // 분류 전 전처리 진행
     preProcess(img) {
       let offset = tf.scalar(127.5);
       return tf.browser
@@ -351,13 +352,14 @@ export default {
         .expandDims();
     },
 
-    backtohome() {
+    // 홈으로 이동하고 모델 초기화
+    backToHome() {
       this.$emit("backto-home");
       this.yolomodel = null;
       this.mobilenet = null;
     },
 
-    // Canvas의 Detecting된 과일에 Rectangle과 Label
+    // Canvas의 Detected된 야채에 Rectangle과 Label 그리기
     draw(box, cls, grade, size) {
       const ctx = this.$refs.canvas.getContext("2d");
       ctx.font = "36px sans-serif";
@@ -381,7 +383,8 @@ export default {
       ctx.strokeRect(box["left"], box["top"], box["width"], box["height"]);
     },
 
-    maketracker(box, now) {
+    // 새로운 객체 Detected되면 등록
+    makeTracker(box, now) {
       const newtracker = {
         id: this.idx,
         date: `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`,
@@ -428,7 +431,7 @@ export default {
       });
     },
 
-    caldistance(obj1, obj2) {
+    calculateDistance(obj1, obj2) {
       // obj1과 obj2의 거리를 구함
       return Math.sqrt(
         Math.pow(Math.abs(obj2["cx"] - obj1["cx"]), 2) +
@@ -436,7 +439,7 @@ export default {
       );
     },
 
-    finddistance(boxes) {
+    findDistance(boxes) {
       const afters = [];
       const befores = [];
       const dists = [];
@@ -456,7 +459,7 @@ export default {
       // 가장 가까운 거리를 구함
       befores.forEach(before => {
         afters.forEach(after => {
-          dst.push(this.caldistance(before, after));
+          dst.push(this.calculateDistance(before, after));
         });
         const idx = dst.indexOf(Math.min(...dst));
 
@@ -471,7 +474,7 @@ export default {
     onlyUnique(value, index, self) {
       return self.indexOf(value) === index;
     },
-    updateposition(boxes) {
+    updatePosition(boxes) {
       if (boxes) {
         boxes.forEach(box => {
           const cx = box["left"] + box["width"] / 2;
@@ -481,7 +484,7 @@ export default {
         });
 
         // 현재 trackers 내 거리와 새로운 boxes의 거리를 구함
-        const results = this.finddistance(boxes);
+        const results = this.findDistance(boxes);
         let new_boxes = results[0];
         let new_dist = results[1];
 
@@ -558,7 +561,7 @@ export default {
 
         let difference = boxes.filter(box => !new_boxes.includes(box));
         if (difference) {
-          difference.forEach(box => this.maketracker(box, now));
+          difference.forEach(box => this.makeTracker(box, now));
         }
       } else {
         this.removeTrackers();
