@@ -175,6 +175,13 @@ export default {
           console.log(err);
         });
     }
+    
+    this.axios
+      .get(`http://localhost:5000/loadmodel/${this.selectedEname}`)
+      .then((result) => {
+        console.log(result.data)
+      })
+
     this.loadYolomodel();
     this.loadMobilenet();
     setInterval(() => {
@@ -281,7 +288,7 @@ export default {
 
         // Axios Post request
         size1 = this.axios
-        .post(`http://localhost:5000/`, {
+        .post(`http://localhost:5000/predict`, {
           name: 'song',
           img: img
         })
