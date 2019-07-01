@@ -178,8 +178,11 @@ export default {
     
     this.axios
       .get(`http://localhost:5000/loadmodel/${this.selectedEname}`)
-      .then((result) => {
+      .then(result => {
         console.log(result.data)
+      })
+      .catch(err => {
+        console.log(err.response)
       })
 
     this.loadYolomodel();
@@ -195,7 +198,7 @@ export default {
 
     // Yolo V3 Model + Classification Model Loading
     async loadYolomodel() {
-      this.yolomodel = await yolo.v3tiny(`http://localhost:5000/api/${this.$route.params.category}/model.json`);
+      this.yolomodel = await yolo.v3tiny(`http://localhost:5000/api/${this.$route.params.category}5/model.json`);
       console.log("yolo model 로딩 완료");
     },
     async loadMobilenet() {      
@@ -226,9 +229,9 @@ export default {
         maxBoxes: 5,
         scoreThreshold: 0.2,
         iouThreshold: 0.5,
-        numClasses: 4,
+        numClasses: 5,
         anchors: [10, 14, 23, 27, 37, 58, 81, 82, 135, 169, 344, 319],
-        classNames: ["apple", "tomato", "pear", "orange"],
+        classNames: ["apple", "tomato", "pear", "orange", "peach"],
         inputSize: 416
       });
 
@@ -267,6 +270,8 @@ export default {
     // Canvas2에 Detected된 과일 / 야채 분류
     classification(box) {
       try {
+        console.log(box)
+        const img = this.$refs.canvas1.toDataURL("image/png");
         this.$refs.cropfruits
           .getContext("2d")
           .drawImage(
@@ -280,7 +285,7 @@ export default {
             300,
             300
           );
-        const img = this.$refs.cropfruits.toDataURL("image/png");        
+        const cropimg = this.$refs.cropfruits.toDataURL("image/png");
         const inputImage = this.preProcess(this.$refs.cropfruits);
         const predictions = this.mobilenet.predict(inputImage);
 
@@ -290,17 +295,21 @@ export default {
         size1 = this.axios
         .post(`http://localhost:5000/predict`, {
           name: 'song',
-          img: img
+          img: img,
+          box: box
         })
-        .then((result) => {
+        .then(result => {
           return result.data
+        })
+        .catch(err => {
+        console.log(err.response)
         })
 
         const results = Array.from(predictions.dataSync());
         const fault = this.classes[results.indexOf(Math.max(...results))];
         const size = 9
         const color = 2
-        
+
         let result = ""
         
         if (this.grade == 2) {
@@ -338,8 +347,9 @@ export default {
           }
         }
 
+        console.log(result)
         // 분류 결과, 이미지, 크기 
-        return [fault, img, size1];
+        return [fault, cropimg, size1];
       } catch (err) {
         console.log(err);
       }

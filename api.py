@@ -26,13 +26,38 @@ def predict():
     start = time.time()
     req = json.loads(request.data)
 
+    # 박스 처리
+    box = req['box']
+    left = box['left']
+    right = box['right']
+    bottom = box['bottom']
+    top = box['top']
+    width = box['width']
+
+    left = int(left)
+    right = int(right)
+    bottom = int(bottom)
+    top = int(top)
+
+    margin = int(width * 0.2)
+
+    left = left - margin
+    right = right + margin
+
+    top = top - margin
+    bottom = bottom + margin    
+
+    # 이미지 처리
     encoded_image = req['img'].split(",")[1]
     decoded_image = base64.b64decode(encoded_image)
-
     img = Image.open(BytesIO(decoded_image))
-    img = img.resize((300, 300), Image.ANTIALIAS)
+    img = img.resize((1024, 768), Image.ANTIALIAS)
     img = np.asarray(img, dtype='uint8')    
     img = img[:,:,:3]
+    
+    roi = img[top:bottom, left:right]
+    roi = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)
+    print(roi.shape)
 
     # Classification
 
@@ -48,4 +73,4 @@ def files(filename):
     return send_from_directory(directory='static', filename=filename)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0",debug=True)
