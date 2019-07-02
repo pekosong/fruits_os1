@@ -106,9 +106,9 @@ export default {
       options: {
         option1: [{ text: "무", value: 0 }, { text: "유", value: 1 }],
         option2: [
-          { text: "상", value: 1 },
-          { text: "중", value: 2 },
-          { text: "하", value: 3 }
+          { text: "상", value: 0 },
+          { text: "중", value: 1 },
+          { text: "하", value: 2 }
         ],
         option3: [
           { text: "9cm", value: 9 },
@@ -122,18 +122,18 @@ export default {
       selectedMatrix: {
         2 : {
           1: {
-            defect: 0, color : 1, size : 9
+            defect: 0, color : 0, size : 9
           },
           2: {
-            defect: 1, color : 2, size : 8
+            defect: 1, color : 1, size : 8
           }
         },
         3 : {
           1: {
-            defect: 0, color : 1, size : 9
+            defect: 0, color : 0, size : 9
           },
           2: {
-            defect: 0, color : 2, size : 8
+            defect: 0, color : 1, size : 8
           },
           3: {
             defect: 1, color : 2, size : 7
@@ -141,16 +141,16 @@ export default {
         },
         4 : {
           1: {
-            defect: 0, color : 1, size : 9
+            defect: 0, color : 0, size : 9
           },
           2: {
-            defect: 0, color : 2, size : 8
+            defect: 0, color : 1, size : 8
           },
           3: {
             defect: 1, color : 2, size : 7
           },
           4: {
-            defect: 1, color : 3, size : 7
+            defect: 1, color : 2, size : 7
           }
         }
       },

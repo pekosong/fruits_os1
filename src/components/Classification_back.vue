@@ -39,7 +39,7 @@
             <b-row v-for="n in grade" :key="n" v-show="show" class="class-item-text p-2 border">
               <b-col class="col-2" style="color:red;font-size:1.3rem">{{ n }} 등급 </b-col>
               <b-col class="col-2">흠: {{ defect[selectedMatrix[n].defect] }}</b-col>
-              <b-col class="col-2">착색: {{ color[selectedMatrix[n].color] }}</b-col>
+              <b-col class="col-2">착색: {{ selectedMatrix[n].color }}</b-col>
               <b-col class="col-4">크기: {{ selectedMatrix[n].size }}cm 이상</b-col>
               <b-col class="col-2" style="color:blue;font-size:1.3rem">{{ count[grade][n-1] }} 개</b-col>
             </b-row>
@@ -77,11 +77,11 @@
                           <div>흡집</div>
                           <img
                             :src="selectedImg"
-                            :style="{filter:'grayscale(' + (100 - (100 / 1 * ((item['fault'] == '0') ? 1 : 0) )) + '%)'}"
+                            :style="{filter:'grayscale(' + (100 - (100 / 1 * ((item['grade'] == '유') ? 1 : 0) )) + '%)'}"
                             style="width: 45px"
                           >
                           <div>
-                            <b-button size="sm" v-if="item['fault'] == '0'" variant="info">정상</b-button>
+                            <b-button size="sm" v-if="item['grade'] == '유'" variant="info">정상</b-button>
                             <b-button size="sm" v-else variant="danger">비정상</b-button>
                           </div>
                         </b-col>
@@ -89,13 +89,12 @@
                           <div>착색</div>
                           <img
                             :src="selectedImg"
-                            :style="{filter:'grayscale(' + (100 - (100 / 1 * ((item['color'] == '0') ? 1 : 0))) + '%)'}"
+                            :style="{filter:'grayscale(' + (100 - (100 / 1 * 1)) + '%)'}"
                             style="width: 45px"
                           >
                           <div>
-                            <b-button size="sm" v-if="item['color'] == '0'" variant="info">상</b-button>
-                            <b-button size="sm" v-else-if="item['color'] == '1'" variant="info">중</b-button>
-                            <b-button size="sm" v-else variant="danger">하</b-button>
+                            <b-button size="sm" v-if="1" variant="info">정상</b-button>
+                            <b-button size="sm" v-else variant="danger">비정상</b-button>
                           </div>
                         </b-col>
                         <b-col md="3">
@@ -127,6 +126,7 @@
 </template>
 
 <script>
+import * as tf from "@tensorflow/tfjs";
 import { setInterval } from "timers";
 import yolo from "tfjs-yolo";
 
@@ -142,7 +142,7 @@ export default {
   data() {
     return {
       defect: { 0: "무", 1: "유" },
-      color: { 0: "상", 1: "중", 2: "하" },
+      color: { 1: "상", 2: "중", 3: "하" },
       status: "선별 중",
       mobilenet: undefined,
       yolomodel: undefined,
@@ -185,6 +185,7 @@ export default {
       })
 
     this.loadYolomodel();
+    this.loadMobilenet();
     setInterval(() => {
       this.play();
     }, 100);
@@ -199,6 +200,13 @@ export default {
       this.yolomodel = await yolo.v3tiny(`http://localhost:5000/api/${this.$route.params.category}5/model.json`);
       console.log("yolo model 로딩 완료");
     },
+    async loadMobilenet() {      
+      const modelname = `http://localhost:5000/api/${this.selectedEname}2/model.json`;
+      console.log(modelname, "로딩시작");
+      this.mobilenet = await tf.loadLayersModel(modelname, false);
+      this.mobilenet.predict(tf.zeros([1, 224, 224, 3])).dispose();
+      console.log(this.selectedEname, "model 로딩완료");
+    },
 
     // Loop 시작
     play() {
@@ -206,7 +214,7 @@ export default {
         this.$refs.canvas1
           .getContext("2d")
           .drawImage(this.$refs.video, 0, 0, this.width, this.height);
-        if (this.yolomodel) {
+        if (this.yolomodel && this.mobilenet) {
           this.detectObj();
         }
       } catch { err => {
@@ -239,8 +247,7 @@ export default {
         this.status = "선별 중";
         let filteredboxses = boxes.filter(
           box => box.class == this.selectedEname
-        ).filter(box => box.top > 200 && box.bottom > 200 );
-        console.log(boxes)
+        );
         this.updatePosition(filteredboxses);
       } else {
         this.updatePosition();
@@ -262,8 +269,8 @@ export default {
     // Canvas2에 Detected된 과일 / 야채 분류
     classification(box) {
       try {
+        console.log(box)
         const img = this.$refs.canvas1.toDataURL("image/png");
-
         this.$refs.cropfruits
           .getContext("2d")
           .drawImage(
@@ -277,11 +284,14 @@ export default {
             300,
             300
           );
-
         const cropimg = this.$refs.cropfruits.toDataURL("image/png");
+        const inputImage = this.preProcess(this.$refs.cropfruits);
+        const predictions = this.mobilenet.predict(inputImage);
+
+        let size1 = 0
 
         // Axios Post request
-        let result = this.axios
+        size1 = this.axios
         .post(`http://localhost:5000/predict`, {
           name: 'song',
           img: img,
@@ -291,11 +301,54 @@ export default {
           return result.data
         })
         .catch(err => {
-        console.log(err)
+        console.log(err.response)
         })
 
+        const results = Array.from(predictions.dataSync());
+        const fault = this.classes[results.indexOf(Math.max(...results))];
+        const size = 9
+        const color = 2
+
+        let result = ""
+        
+        if (this.grade == 2) {
+          if (fault == this.selectedMatrix[1].defect && size >= this.selectedMatrix[1].size && color == this.selectedMatrix[1].color) {
+            this.count[this.grade][0] += 1;
+            result = "1급"
+          } else {
+            this.count[this.grade][1] += 1;
+            result = "2급"
+          }
+        } else if (this.grade == 3) {
+          if (fault == this.selectedMatrix[1].defect && size >= this.selectedMatrix[1].size && color == this.selectedMatrix[1].color) {
+            this.count[this.grade][0] += 1;
+            result = "1급"
+          } else if (fault == this.selectedMatrix[2].defect && size >= this.selectedMatrix[2].size && color == this.selectedMatrix[2].color) {
+            this.count[this.grade][1] += 1;
+            result = "2급"
+          } else {
+            this.count[this.grade][2] += 1;
+            result = "3급"
+          }
+        } else {
+          if (fault == this.selectedMatrix[1].defect && size >= this.selectedMatrix[1].size && color == this.selectedMatrix[1].color) {
+            this.count[this.grade][0] += 1;
+            result = "1급"
+          } else if (fault == this.selectedMatrix[2].defect && size >= this.selectedMatrix[2].size && color == this.selectedMatrix[2].color) {
+            this.count[this.grade][1] += 1;
+            result = "2급"
+          } else if (fault == this.selectedMatrix[2].defect && size >= this.selectedMatrix[2].size && color == this.selectedMatrix[2].color) {
+            this.count[this.grade][2] += 1;
+            result = "3급"
+          } else {
+            this.count[this.grade][3] += 1;
+            result = "4급"
+          }
+        }
+
+        console.log(result)
         // 분류 결과, 이미지, 크기 
-        return [cropimg, result]
+        return [fault, cropimg, size1];
       } catch (err) {
         console.log(err);
       }
@@ -303,53 +356,23 @@ export default {
       this.show = true;
     },
 
-    saveResult(value) {
-      const {fault, color} = value
-      let {size} = value
-      size = parseFloat(size)
-      let result = ""
-      if (this.grade == 2) {
-        if (fault == this.selectedMatrix[1].defect && size >= this.selectedMatrix[1].size && color == this.selectedMatrix[1].color) {
-          this.count[this.grade][0] += 1;
-          result = "1등급"
-        } else {
-          
-          console.log(size >= this.selectedMatrix[1].size)
-          this.count[this.grade][1] += 1;
-          result = "2등급"
-        }
-      } else if (this.grade == 3) {
-        if (fault == this.selectedMatrix[1].defect && size >= this.selectedMatrix[1].size && color == this.selectedMatrix[1].color) {
-          this.count[this.grade][0] += 1;
-          result = "1등급"
-        } else if (fault == this.selectedMatrix[2].defect && size >= this.selectedMatrix[2].size && color == this.selectedMatrix[2].color) {
-          this.count[this.grade][1] += 1;
-          result = "2등급"
-        } else {
-          this.count[this.grade][2] += 1;
-          result = "3등급"
-        }
-      } else {
-        if (fault == this.selectedMatrix[1].defect && size >= this.selectedMatrix[1].size && color == this.selectedMatrix[1].color) {
-          this.count[this.grade][0] += 1;
-          result = "1등급"
-        } else if (fault == this.selectedMatrix[2].defect && size >= this.selectedMatrix[2].size && color == this.selectedMatrix[2].color) {
-          this.count[this.grade][1] += 1;
-          result = "2등급"
-        } else if (fault == this.selectedMatrix[3].defect && size >= this.selectedMatrix[3].size && color == this.selectedMatrix[3].color) {
-          this.count[this.grade][2] += 1;
-          result = "3등급"
-        } else {
-          this.count[this.grade][3] += 1;
-          result = "4등급"
-        }
-      }
-      return result
+    // 분류 전 전처리 진행
+    preProcess(img) {
+      let offset = tf.scalar(127.5);
+      return tf.browser
+        .fromPixels(img)
+        .resizeNearestNeighbor([224, 224])
+        .toFloat()
+        .sub(offset)
+        .div(offset)
+        .expandDims();
     },
+
     // 홈으로 이동하고 모델 초기화
     backToHome() {
       this.$emit("backto-home");
       this.yolomodel = null;
+      this.mobilenet = null;
     },
 
     // Canvas의 Detected된 야채에 Rectangle과 Label 그리기
@@ -362,13 +385,13 @@ export default {
       ctx.fillStyle = "#3498db";
       ctx.fillText(
         `${grade}`,
-        box["left"] + box["width"] / 2 - 30,
+        box["left"] + box["width"] / 2 - 25,
         box["top"] + box["height"] / 2 - 20
       );
       ctx.fillStyle = "#2ecc71";
       ctx.fillText(
         `${size}cm`,
-        box["left"] + box["width"] / 2 - 20,
+        box["left"] + box["width"] / 2 - 15,
         box["top"] + box["height"] / 2 + 20
       );      
       ctx.lineWidth = "5";
@@ -388,7 +411,7 @@ export default {
         gone: false,
         updated: false,
         box: box,
-        grade: "",
+        grade: "선별중",
         img: "",
         // size: parseInt(Math.min(box.width, box.height) / 25),
         size: "",
@@ -411,7 +434,7 @@ export default {
         // 객체 삭제 및 올드에 등록
         if (this.tracker[key]["dis"] > 10) {
           console.log("올드에 등록");
-          if (this.tracker[key]["grade"] != "") {
+          if (this.tracker[key]["grade"] != "선별중") {
             this.tracker[key]["cnt"] = this.cnt;
             // console.log(this.tracker[key]);
             this.oldtracker.push(this.tracker[key]);
@@ -465,11 +488,9 @@ export default {
       // 가장 가까운 거리들 다음 위치와 박스 그리고 거리를 반환
       return [new_boxes, dists];
     },
-
     onlyUnique(value, index, self) {
       return self.indexOf(value) === index;
     },
-
     updatePosition(boxes) {
       if (boxes) {
         boxes.forEach(box => {
@@ -535,19 +556,18 @@ export default {
                 this.tracker[ppl[id]]["size"]
               );
               if (
-                this.tracker[ppl[id]]["grade"] == "" &&
+                this.tracker[ppl[id]]["grade"] == "선별중" &&
                 this.tracker[ppl[id]]["come"] > 2 &&
-                this.yolomodel
+                this.yolomodel &&
+                this.mobilenet
               ) {
-                const results = this.classification(this.tracker[ppl[id]]["box"]);
-                this.tracker[ppl[id]]["grade"] = "선별중"
-                this.tracker[ppl[id]]["img"] = results[0];
+                let results = this.classification(this.tracker[ppl[id]]["box"]);
+                this.tracker[ppl[id]]["grade"] = results[0];
+                this.tracker[ppl[id]]["img"] = results[1];
 
-                Promise.resolve(results[1]).then(value => {
+                Promise.resolve(results[2]).then(value => {
                   this.tracker[ppl[id]]["size"] = value["size"];
-                  this.tracker[ppl[id]]["fault"] = value["fault"];
-                  this.tracker[ppl[id]]["color"] = value["color"];
-                  this.tracker[ppl[id]]["grade"] = this.saveResult(value)
+                  this.tracker[ppl[id]]["grade"] = value["class"];
                 })
                 // this.tracker[ppl[id]]["size"] = res;
               }

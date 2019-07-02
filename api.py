@@ -17,7 +17,7 @@ model = ""
 # Load Model
 @app.route("/loadmodel/<path:modelname>", methods=["GET"])
 def loadmodel(modelname):
-    print(modelname)
+    print(f"{modelname} Model Loaded")
     return f"{modelname} Model Loaded"
 
 # Make a Classification and do jobs
@@ -58,14 +58,19 @@ def predict():
     roi = img[top:bottom, left:right]
     roi = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)
     print(roi.shape)
-
+    resized = cv2.resize(roi, (224, 224))
+    print(resized.shape)
     # Classification
 
     # Calculate Size and Color disturibution
 
     # Dobot Control
-
-    return "success"
+    result = {
+        "size":"8",
+        "fault":"0",
+        "color":"0"
+    }
+    return json.dumps(result)
 
 # Yolo Model API
 @app.route("/api/<path:filename>", methods=["GET"])
