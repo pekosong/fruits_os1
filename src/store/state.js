@@ -43,24 +43,12 @@ const items = {
     },
     {
       id: 8,
-      name: "Green Beans",
-      ename: "",
-      img: require("@/assets/images/large_401558f8-255f-4584-ad12-fdcc16c2ecd9.jpg")
-    },
-    {
-      id: 9,
       name: "아스파라거스",
       ename: "",
       img: require("@/assets/images/large_60576c7b-67a8-4d73-809c-0119f6ddc342.jpg")
     },
     {
-      id: 10,
-      name: "Cauliflower",
-      ename: "",
-      img: require("@/assets/images/large_c876cbb8-a9c0-441b-8c30-87be44922e04.jpg")
-    },
-    {
-      id: 11,
+      id: 9,
       name: "대파",
       ename: "",
       img: require("@/assets/images/large_4fd69247-e19d-45d2-9308-2efda8fda2a4.jpg")
