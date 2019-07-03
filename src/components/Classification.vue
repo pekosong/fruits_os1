@@ -192,7 +192,7 @@ export default {
 
     // Yolo V3 Model + Classification Model Loading
     async loadYolomodel() {
-      this.yolomodel = await yolo.v3tiny(`http://localhost:5000/api/${this.$route.params.category}/model.json`);
+      this.yolomodel = await yolo.v3tiny(`http://localhost:5000/api/${this.$route.params.category}5/model.json`);
       console.log("yolo model 로딩 완료");
     },
 
@@ -533,7 +533,6 @@ export default {
                 this.tracker[ppl[id]]["grade"] = "선별중"
 
                 Promise.resolve(result).then(value => {
-                  console.log(value)
                   this.tracker[ppl[id]]["size"] = value["size"];
                   this.tracker[ppl[id]]["fault"] = value["fault"];
                   this.tracker[ppl[id]]["color"] = value["color"];                  
