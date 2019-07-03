@@ -18,14 +18,6 @@
             <video ref="video" id="video" width="1024px" height="768px" autoplay v-show="false"></video>
             <canvas ref="canvas" id="canvas" width="1024px" height="768px" v-show="true"></canvas>
             <canvas ref="canvas1" id="canvas1" width="1024px" height="768px" v-show="false"></canvas>
-            <canvas
-              style="border-radius: 10px;"
-              ref="cropfruits"
-              id="cropfruits"
-              width="300px"
-              height="300px"
-              v-show="false"
-            ></canvas>
           </b-row>
         </b-container>
         <!-- Left-End -->
@@ -159,7 +151,8 @@ export default {
       idx: 1,
       show: true,
       cnt: 1,
-      numbers: 2
+      numbers: 2,
+      drawing: null,
     };
   },
   mounted() {
@@ -184,10 +177,13 @@ export default {
         console.log(err.response)
       })
 
+    this.drawing = new Image();
+    this.drawing.src = require("@/assets/images/line2.png");
+
     this.loadYolomodel();
     setInterval(() => {
       this.play();
-    }, 100);
+    }, 1);
   },
   methods: {    
     showIndex(idx) {
@@ -216,9 +212,11 @@ export default {
 
     // Yolo Model로 과일 / 야채 Detecting
     async detectObj() {
+
+      const img = this.$refs.canvas1.toDataURL("image/png")
       const boxes = await this.yolomodel.predict(this.$refs.canvas1, {
         maxBoxes: 5,
-        scoreThreshold: 0.2,
+        scoreThreshold: 0.5,
         iouThreshold: 0.5,
         numClasses: 5,
         anchors: [10, 14, 23, 27, 37, 58, 81, 82, 135, 169, 344, 319],
@@ -239,9 +237,8 @@ export default {
         this.status = "선별 중";
         let filteredboxses = boxes.filter(
           box => box.class == this.selectedEname
-        ).filter(box => box.top > 200 && box.bottom > 200 );
-        console.log(boxes)
-        this.updatePosition(filteredboxses);
+        ).filter(box => box.top > 100 && box.left > 300 );
+        this.updatePosition(filteredboxses, img);
       } else {
         this.updatePosition();
         this.status = `${this.selectedEname} 감지 안 됨`;
@@ -260,26 +257,9 @@ export default {
     },
 
     // Canvas2에 Detected된 과일 / 야채 분류
-    classification(box) {
+    classification(box, img) {
       try {
-        const img = this.$refs.canvas1.toDataURL("image/png");
-
-        this.$refs.cropfruits
-          .getContext("2d")
-          .drawImage(
-            this.$refs.canvas1,
-            box.left,
-            box.top,
-            box.width,
-            box.height,
-            0,
-            0,
-            300,
-            300
-          );
-
-        const cropimg = this.$refs.cropfruits.toDataURL("image/png");
-
+        // const img = this.$refs.canvas1.toDataURL("image/png");
         // Axios Post request
         let result = this.axios
         .post(`http://localhost:5000/predict`, {
@@ -295,7 +275,7 @@ export default {
         })
 
         // 분류 결과, 이미지, 크기 
-        return [cropimg, result]
+        return result
       } catch (err) {
         console.log(err);
       }
@@ -353,27 +333,34 @@ export default {
     },
 
     // Canvas의 Detected된 야채에 Rectangle과 Label 그리기
-    draw(box, cls, grade, size) {
+    draw(box, cls, grade, size, color, fault) {
       const ctx = this.$refs.canvas.getContext("2d");
-      ctx.font = "36px sans-serif";
-      ctx.fillStyle = "#FFA500";
-      ctx.fillText(`${cls} `, box.left, box.top - 10);
-      ctx.font = "30px sans-serif";
-      ctx.fillStyle = "#3498db";
+
+      // 신규
+      ctx.drawImage(this.drawing, box["cx"] - 100, box["bottom"] - 10, box["width"], 50)
+      ctx.font = "normal bold 36px Verdana";
+
+      if ( cls == "orange") {
+        ctx.fillStyle = "#d35400";  
+      } else {
+        ctx.fillStyle = "#2980b9";
+      }    
+      ctx.textAlign = "start";
+      ctx.textBaseline = "bottom";
+
       ctx.fillText(
-        `${grade}`,
-        box["left"] + box["width"] / 2 - 30,
-        box["top"] + box["height"] / 2 - 20
+        `${cls} `, 
+        box.left + 10, 
+        box["bottom"] + 60
       );
-      ctx.fillStyle = "#2ecc71";
+
+      ctx.font = "normal bold 22px Verdana";
+      ctx.fillStyle = "#222f3e";
       ctx.fillText(
-        `${size}cm`,
-        box["left"] + box["width"] / 2 - 20,
-        box["top"] + box["height"] / 2 + 20
-      );      
-      ctx.lineWidth = "5";
-      ctx.strokeStyle = "yellow";
-      ctx.strokeRect(box["left"], box["top"], box["width"], box["height"]);
+        `${grade} ${size}cm ${color} ${fault}`,
+        box["left"] + 10,
+        box["bottom"] + 100
+      );
     },
 
     // 새로운 객체 Detected되면 등록
@@ -395,6 +382,7 @@ export default {
         come: 0,
         dis: 0,
         color: "",
+        fault: "",
       };
       console.log("등록 완료");
       this.tracker.push(newtracker);
@@ -470,7 +458,7 @@ export default {
       return self.indexOf(value) === index;
     },
 
-    updatePosition(boxes) {
+    updatePosition(boxes, img) {
       if (boxes) {
         boxes.forEach(box => {
           const cx = box["left"] + box["width"] / 2;
@@ -532,22 +520,25 @@ export default {
                 this.tracker[ppl[id]]["box"],
                 this.tracker[ppl[id]]["cls"],
                 this.tracker[ppl[id]]["grade"],
-                this.tracker[ppl[id]]["size"]
+                this.tracker[ppl[id]]["size"],
+                this.tracker[ppl[id]]["color"],
+                this.tracker[ppl[id]]["fault"],
               );
               if (
                 this.tracker[ppl[id]]["grade"] == "" &&
                 this.tracker[ppl[id]]["come"] > 2 &&
                 this.yolomodel
               ) {
-                const results = this.classification(this.tracker[ppl[id]]["box"]);
+                const result = this.classification(this.tracker[ppl[id]]["box"], img);
                 this.tracker[ppl[id]]["grade"] = "선별중"
-                this.tracker[ppl[id]]["img"] = results[0];
 
-                Promise.resolve(results[1]).then(value => {
+                Promise.resolve(result).then(value => {
+                  console.log(value)
                   this.tracker[ppl[id]]["size"] = value["size"];
                   this.tracker[ppl[id]]["fault"] = value["fault"];
-                  this.tracker[ppl[id]]["color"] = value["color"];
-                  this.tracker[ppl[id]]["grade"] = this.saveResult(value)
+                  this.tracker[ppl[id]]["color"] = value["color"];                  
+                  this.tracker[ppl[id]]["grade"] = this.saveResult(value);
+                  this.tracker[ppl[id]]["img"] = "data:image/png;base64, " + value["img"];
                 })
                 // this.tracker[ppl[id]]["size"] = res;
               }

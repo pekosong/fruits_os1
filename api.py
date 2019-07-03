@@ -6,7 +6,7 @@ from PIL import Image
 from io import BytesIO
 import numpy as np
 import cv2
-
+import io
 import time
 
 app = Flask(__name__, static_folder="static")
@@ -39,13 +39,13 @@ def predict():
     bottom = int(bottom)
     top = int(top)
 
-    margin = int(width * 0.2)
+    # margin = int(width * 0.05)
 
-    left = left - margin
-    right = right + margin
+    # left = left - margin
+    # right = right + margin
 
-    top = top - margin
-    bottom = bottom + margin    
+    # top = top - margin
+    # bottom = bottom + margin    
 
     # 이미지 처리
     encoded_image = req['img'].split(",")[1]
@@ -59,7 +59,14 @@ def predict():
     roi = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)
     print(roi.shape)
     resized = cv2.resize(roi, (224, 224))
-    print(resized.shape)
+    
+    resized = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
+    im = Image.fromarray(resized.astype("uint8"))
+    rawBytes = io.BytesIO()
+    im.save(rawBytes, "PNG")
+    rawBytes.seek(0)
+    img = base64.b64encode(rawBytes.read()).decode("utf-8")
+
     # Classification
 
     # Calculate Size and Color disturibution
@@ -68,7 +75,8 @@ def predict():
     result = {
         "size":"8",
         "fault":"0",
-        "color":"0"
+        "color":"0",
+        "img": img
     }
     return json.dumps(result)
 
