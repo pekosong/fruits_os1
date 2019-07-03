@@ -293,8 +293,6 @@ export default {
           this.count[this.grade][0] += 1;
           result = "1등급"
         } else {
-          
-          console.log(size >= this.selectedMatrix[1].size)
           this.count[this.grade][1] += 1;
           result = "2등급"
         }
