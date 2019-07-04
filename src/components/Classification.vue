@@ -153,6 +153,7 @@ export default {
       cnt: 1,
       numbers: 2,
       drawing: null,
+      classModel: ""
     };
   },
   mounted() {
@@ -172,6 +173,7 @@ export default {
       .get(`http://localhost:5000/loadmodel/${this.selectedEname}`)
       .then(result => {
         console.log(result.data)
+        this.classModel = result.data
       })
       .catch(err => {
         console.log(err.response)
@@ -183,7 +185,7 @@ export default {
     this.loadYolomodel();
     setInterval(() => {
       this.play();
-    }, 1);
+    }, 100);
   },
   methods: {    
     showIndex(idx) {
@@ -192,7 +194,7 @@ export default {
 
     // Yolo V3 Model + Classification Model Loading
     async loadYolomodel() {
-      this.yolomodel = await yolo.v3tiny(`http://localhost:5000/api/${this.$route.params.category}5/model.json`);
+      this.yolomodel = await yolo.v3tiny(`http://localhost:5000/api/${this.$route.params.category}/model.json`);
       console.log("yolo model 로딩 완료");
     },
 
@@ -202,7 +204,7 @@ export default {
         this.$refs.canvas1
           .getContext("2d")
           .drawImage(this.$refs.video, 0, 0, this.width, this.height);
-        if (this.yolomodel) {
+        if (this.yolomodel && this.classModel != "") {
           this.detectObj();
         }
       } catch { err => {
@@ -216,7 +218,7 @@ export default {
       const img = this.$refs.canvas1.toDataURL("image/png")
       const boxes = await this.yolomodel.predict(this.$refs.canvas1, {
         maxBoxes: 5,
-        scoreThreshold: 0.5,
+        scoreThreshold: 0.3,
         iouThreshold: 0.5,
         numClasses: 5,
         anchors: [10, 14, 23, 27, 37, 58, 81, 82, 135, 169, 344, 319],
@@ -328,6 +330,7 @@ export default {
     backToHome() {
       this.$emit("backto-home");
       this.yolomodel = null;
+      this.classModel = ""
     },
 
     // Canvas의 Detected된 야채에 Rectangle과 Label 그리기
@@ -336,7 +339,7 @@ export default {
 
       // 신규
       ctx.drawImage(this.drawing, box["cx"] - 100, box["bottom"] - 10, box["width"], 50)
-      ctx.font = "normal bold 36px Verdana";
+      ctx.font = "normal bold 32px Verdana";
 
       if ( cls == "orange") {
         ctx.fillStyle = "#d35400";  
@@ -352,13 +355,23 @@ export default {
         box["bottom"] + 60
       );
 
-      ctx.font = "normal bold 22px Verdana";
-      ctx.fillStyle = "#222f3e";
+      ctx.font = "normal bold 25px Verdana";
+      ctx.fillStyle = "#FC427B";
       ctx.fillText(
-        `${grade} ${size}cm ${color} ${fault}`,
+        `${grade}`,
         box["left"] + 10,
         box["bottom"] + 100
       );
+      
+      if (color != "") {
+        ctx.font = "normal bold 21px Verdana";
+        ctx.fillStyle = "#192a56";
+        ctx.fillText(
+          `흠|${this.defect[fault]}, 색|${color}, cm|${size}`,
+          box["left"] + 10,
+          box["bottom"] + 140
+        );
+      }
     },
 
     // 새로운 객체 Detected되면 등록
@@ -375,7 +388,6 @@ export default {
         box: box,
         grade: "",
         img: "",
-        // size: parseInt(Math.min(box.width, box.height) / 25),
         size: "",
         come: 0,
         dis: 0,
@@ -399,7 +411,6 @@ export default {
           console.log("올드에 등록");
           if (this.tracker[key]["grade"] != "") {
             this.tracker[key]["cnt"] = this.cnt;
-            // console.log(this.tracker[key]);
             this.oldtracker.push(this.tracker[key]);
             this.cnt += 1;
           }

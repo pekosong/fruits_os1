@@ -1,9 +1,16 @@
 from flask import Flask, request, send_from_directory
 from flask_cors import CORS
-import json
-import base64
+from keras.models import load_model
+
 from PIL import Image
 from io import BytesIO
+
+import keras.applications as models
+import tensorflow as tf
+
+import json
+import base64
+
 import numpy as np
 import cv2
 import io
@@ -14,15 +21,27 @@ CORS(app)
 
 model = ""
 
+def makePredict(img):
+    global model
+    img = cv2.resize(img, (224, 224))
+    img = img.astype(np.float32)
+    img = models.resnet50.preprocess_input(img)    
+    img = np.expand_dims(img, axis=0)
+    result = model.predict(img)
+    return result
+
 # Load Model
 @app.route("/loadmodel/<path:modelname>", methods=["GET"])
 def loadmodel(modelname):
-    print(f"{modelname} Model Loaded")
+    global model
+    model = load_model("static/apple/apple_soft.hdf5")
+    model._make_predict_function()
+    model.predict(np.zeros((1, 224, 224, 3)))
     return f"{modelname} Model Loaded"
 
 # Make a Classification and do jobs
 @app.route("/predict", methods=["POST"])
-def predict():
+def predict():    
     start = time.time()
     req = json.loads(request.data)
 
@@ -40,7 +59,6 @@ def predict():
     top = int(top)
 
     # margin = int(width * 0.05)
-
     # left = left - margin
     # right = right + margin
 
@@ -55,26 +73,36 @@ def predict():
     img = np.asarray(img, dtype='uint8')    
     img = img[:,:,:3]
     
-    roi = img[top:bottom, left:right]
-    roi = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)
-    print(roi.shape)
-    resized = cv2.resize(roi, (224, 224))
-    
-    resized = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
+    # 1) Fault Classification
+    pred = makePredict(img[top:bottom, left:right])
+    print(pred)
+    # pred = "0" if pred[0] > 0.95 else "1"
+    pred = np.argmax(pred[0])    
+    pred = "1" if pred == 0 else "0"
+
+    # 2) Calculate Size
+
+    size = max(box["height"], box["width"])
+    distance = 30 # from Object to Camera
+    rescale = 1
+    size = "{:.1f}".format(float((size * rescale) / distance))
+
+    # 3) Color distribution
+
+    # 4) Image 
+    resized = cv2.resize(img[top:bottom, left:right], (300, 300))
     im = Image.fromarray(resized.astype("uint8"))
     rawBytes = io.BytesIO()
     im.save(rawBytes, "PNG")
     rawBytes.seek(0)
     img = base64.b64encode(rawBytes.read()).decode("utf-8")
 
-    # Classification
-
-    # Calculate Size and Color disturibution
-
     # Dobot Control
+
+
     result = {
-        "size":"8",
-        "fault":"0",
+        "size": size,
+        "fault": pred,
         "color":"0",
         "img": img
     }
